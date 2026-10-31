@@ -219,3 +219,26 @@ jobs:
             commit with a message that lists what you fixed, and `git push origin HEAD:${{ github.event.pull_request.head.ref }}`.
           claude_args: |
             --allowedTools "Edit,Write,Read,Glob,Grep,Task,Bash(npm ci),Bash(npm run:*),Bash(npm test:*),Bash(npx biome:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*)"
+
+  deploy-after-automerge:
+    # GITHUB_TOKEN merges do not fire push events, so start the deploy once the auto-merge lands.
+    needs: quality-gate
+    if: needs.quality-gate.outputs.action == 'automerge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - run: |
+          for i in $(seq 1 60); do
+            state=$(gh pr view "$PR" --json state -q .state)
+            if [ "$state" = MERGED ]; then gh workflow run deploy.yml --ref main; exit 0; fi
+            if [ "$state" = CLOSED ]; then exit 0; fi
+            sleep 15
+          done
+          echo "PR #$PR was not merged within 15 minutes; skipping deploy" >> "$GITHUB_STEP_SUMMARY"

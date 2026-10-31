@@ -11,6 +11,7 @@ Issue + ai:ready
        pass  → auto-merge ラベル + squash で自動マージ予約
        fix   → Claude が指摘を直して push（最大 3 回）→ もう一度 CI から
        human → needs-human ラベル + あなたをレビュアーに指定
+  → main にマージされたら AWS にデプロイ                                  (deploy.yml)
 ```
 
 設計は Anthropic の [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/) を参考にしています。
@@ -42,7 +43,9 @@ Issue + ai:ready
 
 ## 初期設定（リポジトリ管理者が1回だけ）
 
-1. **Claude の認証**: 手元で `claude setup-token` を実行し、出た値を Settings → Secrets and variables → Actions に `CLAUDE_CODE_OAUTH_TOKEN` として登録（API 課金にするなら代わりに `ANTHROPIC_API_KEY`）
+すべてブラウザ（スマホ可）でできます。
+
+1. **Claude の認証**: https://console.anthropic.com/settings/keys で API キーを作り、GitHub の Settings → Secrets and variables → Actions → New repository secret に `ANTHROPIC_API_KEY` として登録（PC で `claude setup-token` を実行できる場合は、代わりに `CLAUDE_CODE_OAUTH_TOKEN` でサブスクリプション枠を使えます）
 2. **Claude GitHub App**: このリポジトリにインストールされていること（https://github.com/apps/claude）。Claude が作る PR で CI が動くのはこのアプリのトークンを使うため
 3. **マージ設定**: Settings → General → Pull Requests で
    - 「Allow squash merging」だけオン（merge commit と rebase はオフ）
@@ -58,6 +61,32 @@ Issue + ai:ready
    - Block force pushes
 6. **ラベル**: Actions タブ → Labels → Run workflow（main へのマージ時にも1回動きます）
 7. 任意: Settings → Secrets and variables → Actions → Variables に `HUMAN_REVIEWER`（既定はリポジトリのオーナー）
+
+## CI からのデプロイ
+
+`main` が変わるたびに `.github/workflows/deploy.yml` が AWS にデプロイします（自動マージのあとも動きます）。AWS のアクセスキーは保存せず、GitHub の OIDC で一時的な権限を受け取ります。初回は CDK の bootstrap もこのワークフローが行います。
+
+AWS 側の設定（AWS コンソールで1回だけ、ブラウザで可）:
+
+1. IAM → ID プロバイダ → プロバイダを追加
+   - プロバイダのタイプ: OpenID Connect
+   - プロバイダの URL: `https://token.actions.githubusercontent.com`
+   - 対象者: `sts.amazonaws.com`
+2. IAM → ロール → ロールを作成
+   - 信頼されたエンティティ: ウェブアイデンティティ、ID プロバイダ `token.actions.githubusercontent.com`、Audience `sts.amazonaws.com`
+   - GitHub 組織: `yamkazu`、GitHub リポジトリ: `miruca`、GitHub ブランチ: `main`
+   - 許可ポリシー: `AdministratorAccess`（初回の bootstrap で IAM ロールなどを作るため。安定したら CDK の `cdk-hnb659fds-*` ロールを引き受ける権限だけに絞れます）
+   - ロール名: `miruca-github-deploy`
+3. 作ったロールの ARN（`arn:aws:iam::<アカウントID>:role/miruca-github-deploy`）をコピー
+
+GitHub 側の設定:
+
+1. Settings → Secrets and variables → Actions → Variables → New repository variable
+   - `AWS_DEPLOY_ROLE_ARN` = 上の ARN
+   - 任意: `AWS_REGION`（既定 `ap-northeast-1`）
+2. Actions タブ → Deploy → Run workflow（以後は main へのマージで自動）。完了すると実行結果の Summary に CloudFront の URL が出ます
+
+`AWS_DEPLOY_ROLE_ARN` が未設定の間はデプロイのジョブは何もせずスキップします。
 
 ## ローカルで同じことをする
 
