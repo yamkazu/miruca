@@ -30,10 +30,24 @@ GitHub からチームのパフォーマンス（PR リードタイム、レビ�
 
 Issue から実装するとき:
 
-1. Issue の背景と受け入れ条件を読む。曖昧で実装できないなら、コードを書かずに質問をコメントして `ai:question` ラベルを付けて止まる
+1. Issue の背景と受け入れ条件、エージェントブリーフのコメント（/triage が書いたもの）があればそれも読む。曖昧で実装できないなら、コードを書かずに質問をコメントして `needs-info` ラベルを付けて止まる
 2. 受け入れ条件を満たす最小の変更を実装し、テストを足す
 3. `npm run lint`、`npm run typecheck`、`npm test`、`npm run synth` をすべて通す。通るまで直す
 4. 差分を見直す（関係ない変更が混ざっていないか、受け入れ条件を全部満たしたか）
 5. `.github/pull_request_template.md` の形で PR を作る。`Closes #<番号>`、受け入れ条件ごとの対応、実行したコマンドと結果を書く
 
 PR では品質ゲート（AI レビュー、セキュリティレビュー、リスク判定）が走る。修正を求められたら指摘を直して push する。
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for yamkazu/miruca. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`); `ready-for-agent` also starts the implementing agent in GitHub Actions. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root, created when needed. See `docs/agents/domain.md`.

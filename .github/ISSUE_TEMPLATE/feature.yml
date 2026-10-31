@@ -1,5 +1,5 @@
 name: 機能追加
-description: 新しい機能や改善。AI に任せるなら作成後に ai:ready ラベルを付けます。
+description: 新しい機能や改善。AI に任せるなら作成後に ready-for-agent ラベルを付けます。
 labels: ["type:feature"]
 body:
   - type: textarea

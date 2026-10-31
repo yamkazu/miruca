@@ -1,5 +1,5 @@
 name: 雑務・保守
-description: リファクタリング、依存更新、ドキュメントなど。AI に任せるなら作成後に ai:ready ラベルを付けます。
+description: リファクタリング、依存更新、ドキュメントなど。AI に任せるなら作成後に ready-for-agent ラベルを付けます。
 labels: ["type:chore"]
 body:
   - type: textarea

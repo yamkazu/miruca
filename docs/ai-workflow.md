@@ -1,16 +1,16 @@
 # Issue 駆動の AI 開発フロー
 
-Issue に `ai:ready` を付けると、Claude が実装・検証して PR を作り、CI と品質ゲートを通ったものは自動でマージされます。迷うものだけ人間に回ります。
+Issue に `ready-for-agent` を付けると、Claude が実装・検証して PR を作り、CI と品質ゲートを通ったものは自動でマージされます。迷うものだけ人間に回ります。
 
 ```
-Issue + ai:ready
+Issue + ready-for-agent
   → Claude が実装し、lint / 型 / テスト / synth を自分で通して PR を作る   (.github/workflows/claude.yml)
   → CI                                                                    (pr.yml: ci)
   → AI レビュー + セキュリティレビュー（並列）                            (pr.yml: ai-review, security-review)
   → 品質ゲート                                                            (pr.yml: quality-gate → scripts/gate)
        pass  → auto-merge ラベル + squash で自動マージ予約
        fix   → Claude が指摘を直して push（最大 3 回）→ もう一度 CI から
-       human → needs-human ラベル + あなたをレビュアーに指定
+       human → ready-for-human ラベル + あなたをレビュアーに指定
   → main にマージされたら AWS にデプロイ                                  (deploy.yml)
 ```
 
@@ -19,9 +19,11 @@ Issue + ai:ready
 ## あなたがやること
 
 - Issue をテンプレートで書く。**受け入れ条件**がレビューと自動マージの基準になります
-- `ai:ready` を付ける
-- `ai:question` が付いたら質問に答え、`@claude 回答しました` とコメントして再開
-- `needs-human` の PR を見て、マージするか `@claude <直してほしいこと>` とコメント
+- `ready-for-agent` を付ける
+- `needs-info` が付いたら質問に答え、`@claude 回答しました` とコメントして再開
+- `ready-for-human` の PR を見て、マージするか `@claude <直してほしいこと>` とコメント
+
+ラベルは mattpocock/skills のトリアージ用ラベル（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`）に合わせています（`docs/agents/triage-labels.md`）。Claude Code で `/to-tickets` や `/triage` を使って `ready-for-agent` にした Issue は、そのまま Actions の Claude が実装を始めます。
 
 ## 品質ゲートの判定
 

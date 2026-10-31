@@ -14,7 +14,7 @@ const GATE_MARK = '<!-- miruca-quality-gate -->';
 export const FIX_MARK = '<!-- miruca-fix-request -->';
 const LABELS = {
   'auto-merge': { color: '0e8a16', description: '品質ゲートを通過し自動マージ予約済み' },
-  'needs-human': { color: 'd93f0b', description: '人間のレビューと判断が必要' },
+  'ready-for-human': { color: 'd93f0b', description: 'Issue: 人間が実装する / PR: 人間のレビューとマージ待ち' },
 };
 
 async function gh(path, init = {}) {
@@ -154,7 +154,7 @@ async function main(mode) {
   } else {
     await setAutoMerge(pull.node_id, false);
     if (result.action === 'human') {
-      await setLabels('needs-human');
+      await setLabels('ready-for-human');
       const reviewer = env.HUMAN_REVIEWER;
       if (reviewer && reviewer !== pull.user.login) {
         await gh(`/repos/${owner}/${repo}/pulls/${pr}/requested_reviewers`, {

@@ -20,11 +20,15 @@ jobs:
       - run: |
           set -e
           create() { gh label create "$1" --color "$2" --description "$3" --force; }
-          create "ai:ready"      0052cc "AI に実装を依頼する（着手トリガー）"
-          create "ai:working"    fbca04 "AI が実装中"
-          create "ai:question"   c5def5 "AI が質問中。答えて @claude で再開"
-          create "auto-merge"    0e8a16 "品質ゲートを通過し自動マージ予約済み"
-          create "needs-human"   d93f0b "人間のレビューと判断が必要"
+          # Triage roles shared with mattpocock/skills (docs/agents/triage-labels.md)
+          create "needs-triage"    ededed "メンテナが内容を確認する"
+          create "needs-info"      c5def5 "情報待ち（AI の質問を含む）。答えて @claude で再開"
+          create "ready-for-agent" 0052cc "仕様が固まり AI に任せられる。付けると Claude が実装を始める"
+          create "ready-for-human" d93f0b "Issue: 人間が実装する / PR: 人間のレビューとマージ待ち"
+          create "wontfix"         ffffff "対応しない"
+          # Used by this repo's workflows
+          create "ai:working"      fbca04 "AI が実装中"
+          create "auto-merge"      0e8a16 "品質ゲートを通過し自動マージ予約済み"
           create "type:feature"  a2eeef "機能追加"
           create "type:bug"      d73a4a "バグ"
           create "type:chore"    ededed "雑務・保守"

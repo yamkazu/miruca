@@ -1,5 +1,5 @@
 name: バグ
-description: 期待どおりに動かないもの。AI に任せるなら作成後に ai:ready ラベルを付けます。
+description: 期待どおりに動かないもの。AI に任せるなら作成後に ready-for-agent ラベルを付けます。
 labels: ["type:bug"]
 body:
   - type: textarea
