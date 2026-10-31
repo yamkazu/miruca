@@ -16,6 +16,7 @@ export const SENSITIVE_RULES = [
 const LOCKFILES = new Set(['package-lock.json']);
 const isSource = (f) => /^apps\/[^/]+\/src\//.test(f) || /^scripts\/(?!test\/).+\.m?[jt]s$/.test(f);
 const isTest = (f) => /(^|\/)test\//.test(f) || /\.test\.[mc]?[jt]sx?$/.test(f);
+const isDocsOrTest = (f) => /\.md$/.test(f) || f.startsWith('docs/') || isTest(f);
 
 /**
  * @param {{ filename: string, additions: number, deletions: number }[]} files
@@ -34,6 +35,8 @@ export function classifyChange(files, { maxLines = 400 } = {}) {
     linesChanged,
     tooLarge: linesChanged > maxLines,
     sourceWithoutTests: touchesSource && !touchesTests,
+    // The risk tier comes from what changed, not from the AI: only docs and tests are "low".
+    docsOrTestsOnly: files.length > 0 && files.every((f) => isDocsOrTest(f.filename)),
   };
 }
 
@@ -43,8 +46,8 @@ const maxTier = (a, b) => (rank(a) >= rank(b) ? a : b);
 /**
  * @param {object} input
  * @param {ReturnType<typeof classifyChange>} input.change
- * @param {{ tier: string, verdict: 'pass'|'fix'|'human', important: number, summary?: string } | null} input.review
- * @param {{ findings: number, summary?: string } | null} input.security
+ * @param {{ comments: number, critical: number } | null} input.review   null when the review job did not succeed; inline AI review comments on the head commit, and how many start with [critical]
+ * @param {object | null} input.security                 null when the security-review job did not succeed
  * @param {number} input.fixRounds     fix requests already made on this PR
  * @param {number} [input.maxFixRounds]
  * @param {boolean} input.trustedAuthor PR opened by the implementing AI
@@ -57,14 +60,12 @@ export function decide({ change, review, security, fixRounds, maxFixRounds = 3, 
     return { action: 'human', gatePass: false, tier: 'high', reasons: ['AI レビューまたはセキュリティレビューが完了しなかった'] };
   }
 
-  let tier = TIERS.includes(review.tier) ? review.tier : 'high';
+  let tier = change.docsOrTestsOnly ? 'low' : 'medium';
   if (change.sensitive.length > 0) tier = 'high';
   if (change.tooLarge) tier = maxTier(tier, 'medium');
 
   const blocking = [];
-  if (security.findings > 0) blocking.push(`セキュリティの指摘が ${security.findings} 件`);
-  if (review.important > 0) blocking.push(`Important の指摘が ${review.important} 件`);
-  if (review.verdict === 'fix' && review.important === 0) blocking.push('AI レビューが修正を求めている');
+  if (review.critical > 0) blocking.push(`重大（critical）な指摘が ${review.critical} 件`);
   if (change.sourceWithoutTests) blocking.push('ソースを変えたのにテストの変更がない');
 
   if (blocking.length > 0) {
@@ -76,7 +77,7 @@ export function decide({ change, review, security, fixRounds, maxFixRounds = 3, 
   }
 
   const human = [];
-  if (review.verdict === 'human') human.push('AI レビューが人間の判断を求めている');
+  if (review.comments > review.critical) human.push(`重大でない指摘が ${review.comments - review.critical} 件（人間が確認）`);
   if (!trustedAuthor) human.push('AI 以外が作った PR');
   if (foreignCommits) human.push('AI 以外のコミットが含まれる');
   human.push(...change.sensitive);
