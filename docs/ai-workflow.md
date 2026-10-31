@@ -73,7 +73,7 @@ Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR
 
 ## CI からのデプロイ
 
-`main` が変わるたびに `.github/workflows/deploy.yml` が AWS にデプロイします（自動マージのあとも動きます）。AWS のアクセスキーは保存せず、GitHub の OIDC で一時的な権限を受け取ります。初回は CDK の bootstrap もこのワークフローが行います。
+`main` が変わるたびに `.github/workflows/deploy.yml` が AWS にデプロイします（自動マージのあとも動きます）。AWS のアクセスキーは保存せず、GitHub の OIDC で一時的な権限を受け取ります。
 
 AWS 側の設定（AWS コンソールで1回だけ、ブラウザで可）:
 
@@ -84,18 +84,40 @@ AWS 側の設定（AWS コンソールで1回だけ、ブラウザで可）:
 2. IAM → ロール → ロールを作成
    - 信頼されたエンティティ: ウェブアイデンティティ、ID プロバイダ `token.actions.githubusercontent.com`、Audience `sts.amazonaws.com`
    - GitHub 組織: `yamkazu`、GitHub リポジトリ: `miruca`、GitHub ブランチ: `main`
-   - 許可ポリシー: `AdministratorAccess`（初回の bootstrap で IAM ロールなどを作るため。安定したら CDK の `cdk-hnb659fds-*` ロールを引き受ける権限だけに絞れます）
+   - 許可ポリシーはここでは何も選ばずに次へ
    - ロール名: `miruca-github-deploy`
-3. 作ったロールの ARN（`arn:aws:iam::<アカウントID>:role/miruca-github-deploy`）をコピー
+3. 作ったロール → 許可を追加 → インラインポリシーを作成 → JSON に次を貼り、名前を `assume-cdk-roles` にして作成
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": "sts:AssumeRole",
+         "Resource": "arn:aws:iam::*:role/cdk-hnb659fds-*"
+       }
+     ]
+   }
+   ```
+
+   GitHub のロールが直接持つのは、CDK の bootstrap が作るロールを引き受ける権限だけです。実際のリソース作成は、CDK のロール経由で CloudFormation が行います。
+
+4. ロールの ARN（`arn:aws:iam::<アカウントID>:role/miruca-github-deploy`）をコピー
 
 GitHub 側の設定:
 
 1. Settings → Secrets and variables → Actions → Variables → New repository variable
    - `AWS_DEPLOY_ROLE_ARN` = 上の ARN
    - 任意: `AWS_REGION`（既定 `ap-northeast-1`）
-2. Actions タブ → Deploy → Run workflow（以後は main へのマージで自動）。完了すると実行結果の Summary に CloudFront の URL が出ます
 
-`AWS_DEPLOY_ROLE_ARN` が未設定の間はデプロイのジョブは何もせずスキップします。
+初回だけ CDK の bootstrap が必要です（S3 バケット、ECR、CDK 用の IAM ロールを作ります）。これには強い権限が要るので、一時的に付けて外します。
+
+1. ロール `miruca-github-deploy` に `AdministratorAccess` を一時的に付ける
+2. Actions → Deploy → Run workflow で「CDK bootstrap も行う」にチェックして実行
+3. 成功したら `AdministratorAccess` を外す（`assume-cdk-roles` だけを残す）
+
+以後は main へのマージで自動デプロイされます（bootstrap なし）。完了すると、実行結果の Summary に CloudFront の URL が出ます。`AWS_DEPLOY_ROLE_ARN` が未設定の間は、デプロイのジョブは何もせずスキップします。
 
 ## ローカルで同じことをする
 
