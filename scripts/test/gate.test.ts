@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { classifyChange, decide } from '../gate/decide.mjs';
 
 const f = (filename: string, lines = 10) => ({ filename, additions: lines, deletions: 0 });
-const clean = { tier: 'low', verdict: 'pass' as const, important: 0 };
-const noSec = { findings: 0 };
+const clean = { comments: 0, critical: 0 };
+const noSec = {};
 const base = { fixRounds: 0, trustedAuthor: true, foreignCommits: false };
 
 describe('classifyChange', () => {
@@ -16,6 +16,11 @@ describe('classifyChange', () => {
     const c = classifyChange([f('package-lock.json', 5000), f('README.md', 10)]);
     expect(c.linesChanged).toBe(10);
     expect(c.tooLarge).toBe(false);
+  });
+
+  it('treats only docs and tests as low risk', () => {
+    expect(classifyChange([f('README.md'), f('docs/ai-workflow.md'), f('apps/api/test/app.test.ts')]).docsOrTestsOnly).toBe(true);
+    expect(classifyChange([f('README.md'), f('apps/api/src/app.ts')]).docsOrTestsOnly).toBe(false);
   });
 
   it('flags source changes without test changes', () => {
@@ -33,8 +38,8 @@ describe('decide', () => {
   });
 
   it('routes medium risk to a human under the default scope', () => {
-    const r = decide({ ...base, change: docsOnly, review: { ...clean, tier: 'medium' }, security: noSec });
-    expect(r).toMatchObject({ action: 'human', gatePass: true });
+    const change = classifyChange([f('apps/api/src/app.ts'), f('apps/api/test/app.test.ts')]);
+    expect(decide({ ...base, change, review: clean, security: noSec })).toMatchObject({ action: 'human', gatePass: true, tier: 'medium' });
   });
 
   it('always routes sensitive paths to a human, whatever the review says', () => {
@@ -44,7 +49,7 @@ describe('decide', () => {
   });
 
   it('asks the AI to fix blocking findings, up to the round cap', () => {
-    const review = { ...clean, verdict: 'fix' as const, important: 2 };
+    const review = { comments: 2, critical: 1 };
     expect(decide({ ...base, change: docsOnly, review, security: noSec, fixRounds: 2 }).action).toBe('fix');
     expect(decide({ ...base, change: docsOnly, review, security: noSec, fixRounds: 3 })).toMatchObject({
       action: 'human',
@@ -52,8 +57,11 @@ describe('decide', () => {
     });
   });
 
-  it('blocks on security findings', () => {
-    expect(decide({ ...base, change: docsOnly, review: clean, security: { findings: 1 } }).gatePass).toBe(false);
+  it('sends non-critical comments to a human without failing the gate', () => {
+    expect(decide({ ...base, change: docsOnly, review: { comments: 2, critical: 0 }, security: noSec })).toMatchObject({
+      action: 'human',
+      gatePass: true,
+    });
   });
 
   it('never auto-merges PRs from people or with foreign commits', () => {
@@ -61,8 +69,9 @@ describe('decide', () => {
     expect(decide({ ...base, change: docsOnly, review: clean, security: noSec, foreignCommits: true }).action).toBe('human');
   });
 
-  it('fails closed when a review did not finish', () => {
+  it('fails closed when a review job did not succeed', () => {
     expect(decide({ ...base, change: docsOnly, review: null, security: noSec })).toMatchObject({ action: 'human', gatePass: false });
+    expect(decide({ ...base, change: docsOnly, review: clean, security: null })).toMatchObject({ action: 'human', gatePass: false });
   });
 
   it('turns auto-merge off entirely with scope none', () => {
