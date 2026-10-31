@@ -1,0 +1,7 @@
+{
+  "app": "npx tsx bin/miruca.ts",
+  "watch": { "include": ["bin/**", "lib/**"] },
+  "context": {
+    "@aws-cdk/core:checkSecretUsage": true
+  }
+}
