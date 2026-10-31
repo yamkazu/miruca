@@ -21,7 +21,7 @@ Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR
 
 自動修正（fix）は、`ai/` ブランチなら Actions の Claude が pstack で行います（`pr.yml: auto-fix`）。`claude/` ブランチなら、その PR を作ったスレッドの Claude が品質ゲートの修正依頼コメントを受けて直します。
 
-セキュリティは AI レビューではなく CodeQL で見ます（`.github/workflows/codeql.yml`）。PR・main への push・週1回（月曜朝）に JavaScript/TypeScript と GitHub Actions のワークフローを解析し、結果は PR のチェックと Security タブ → Code scanning に出ます。品質ゲートとは独立していて、マージを止めるかどうかはブランチのルールで決めます（初期設定の 5）。
+セキュリティは AI レビューではなく CodeQL で見ます（`.github/workflows/codeql.yml`）。PR と main への push で JavaScript/TypeScript と GitHub Actions のワークフローを解析し、結果は PR のチェックと Security タブ → Code scanning に出ます。品質ゲートとは独立していて、マージを止めるかどうかはブランチのルールで決めます（初期設定の 5）。
 
 設計は Anthropic の [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/) を参考にしています。
 
