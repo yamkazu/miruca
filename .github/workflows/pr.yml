@@ -81,6 +81,7 @@ jobs:
           allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
           prompt: |
             Run `/code-review medium ${{ github.event.pull_request.number }} --comment`.
+            Every finding must end up as an inline comment on the PR; post any the skill left unposted.
             Then return: important = number of findings it posted; verdict = pass if 0, else fix;
             tier = low (docs or tests only), high (infra/, .github/, auth, dependencies) or medium (anything else);
             summary = one Japanese sentence starting with the finding count.
