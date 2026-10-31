@@ -19,6 +19,13 @@ describe('Cursor plugin setup (npx-centered, not vendored)', () => {
     expect(docs).toMatch(/\/ponytail-review/);
   });
 
+  it('enables pstack at project scope via .cursor/settings.json', () => {
+    const settings = JSON.parse(readFileSync('.cursor/settings.json', 'utf8')) as {
+      plugins?: Record<string, { enabled?: boolean }>;
+    };
+    expect(settings.plugins?.pstack?.enabled).toBe(true);
+  });
+
   it('ships an executable setup script that installs skills and the rule', () => {
     const script = 'scripts/setup-cursor-plugins.sh';
     expect(existsSync(script)).toBe(true);

@@ -6,7 +6,8 @@
 # 中心:
 #   npx skills add DietrichGebert/ponytail -a cursor   # 6 skills → .agents/skills/
 #   upstream .cursor/rules/ponytail.mdc をプロジェクトへコピー（always-on）
-#   任意: mattpocock / pstack（marketplace 案内）
+#   任意: mattpocock
+#   pstack: プロジェクトスコープはコミット済み .cursor/settings.json（plugins.pstack）
 #
 # 生成物は gitignore（.agents/skills/、.cursor/rules/ponytail.mdc、skills-lock.json）。
 # オプション: --with-mattpocock / --check-only / --skip-rules
@@ -102,18 +103,6 @@ install_ponytail_rule() {
   return 1
 }
 
-find_agent_cli() {
-  if command -v agent >/dev/null 2>&1; then
-    echo agent
-    return 0
-  fi
-  if command -v cursor-agent >/dev/null 2>&1; then
-    echo cursor-agent
-    return 0
-  fi
-  return 1
-}
-
 if [[ "$CHECK_ONLY" -eq 1 ]]; then
   info "check-only: verify local install (no network writes)"
   if check_ponytail_installed; then
@@ -155,25 +144,13 @@ else
   info "mattpocock skipped (pass --with-mattpocock to install)"
 fi
 
-AGENT_CLI=""
-if AGENT_CLI="$(find_agent_cli)"; then
-  ok "Cursor agent CLI: $AGENT_CLI"
-  info "Registering cursor/plugins marketplace (for pstack)"
-  if "$AGENT_CLI" plugin marketplace add https://github.com/cursor/plugins.git 2>/dev/null \
-    || "$AGENT_CLI" plugin marketplace add https://github.com/cursor/plugins 2>/dev/null \
-    || "$AGENT_CLI" plugin marketplace add cursor/plugins 2>/dev/null; then
-    ok "marketplace cursor/plugins registered (or already present)"
-  else
-    warn "could not register marketplace via CLI"
-  fi
-  if "$AGENT_CLI" plugin install pstack@cursor-plugins 2>/dev/null \
-    || "$AGENT_CLI" plugin install pstack 2>/dev/null; then
-    ok "pstack install command succeeded"
-  else
-    warn "pstack: install from Cursor with /add-plugin pstack (project scope) or Customize → Plugins"
-  fi
+PSTACK_SETTINGS=".cursor/settings.json"
+if [[ -f "$PSTACK_SETTINGS" ]] && grep -q '"pstack"' "$PSTACK_SETTINGS" && grep -q '"enabled"[[:space:]]*:[[:space:]]*true' "$PSTACK_SETTINGS"; then
+  ok "pstack project scope: $PSTACK_SETTINGS (plugins.pstack.enabled)"
+  info "After pull: Cursor で Developer: Reload Window。UI の Project install が失敗したらこのファイルが回避策"
 else
-  warn "agent / cursor-agent CLI not on PATH; for pstack run /add-plugin pstack in Cursor"
+  warn "missing project-scoped pstack in $PSTACK_SETTINGS — expect { \"plugins\": { \"pstack\": { \"enabled\": true } } }"
+  fail=1
 fi
 
 if check_ponytail_installed; then
@@ -185,11 +162,12 @@ fi
 cat <<'EOF'
 
 Cursor plugin setup (Miruca)
-  Team share = run this script after clone (files are gitignored; not vendored).
+  Team share = run this script after clone (ponytail files are gitignored; not vendored).
 
   Skills (npx → .agents/skills/):  /ponytail-review  /ponytail  /ponytail-audit …
   Rule (fetched → .cursor/rules/ponytail.mdc): always-on lazy senior mode
-  pstack: /add-plugin pstack   mattpocock: npm run setup:cursor-plugins -- --with-mattpocock
+  pstack (project): committed .cursor/settings.json → Reload Window
+  mattpocock: npm run setup:cursor-plugins -- --with-mattpocock
 
   Claude: npm run setup:claude-plugins  (.claude/settings.json — unchanged by this script)
 

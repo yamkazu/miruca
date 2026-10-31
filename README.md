@@ -26,14 +26,14 @@ Issue に `ready-for-agent` ラベルを付けると Claude が実装して PR �
 
 ### Cursor プラグイン（チーム共有）
 
-ponytail はベンダーせず、clone 後にセットアップします（Claude の `setup:claude-plugins` と同じ考え方）。
+- **pstack（プロジェクトスコープ）**: [`.cursor/settings.json`](.cursor/settings.json) にコミット済み。開いたら Reload Window。Customize で Project に入れる場合も同じファイルに載る想定。
+- **ponytail**: ベンダーせず clone 後にセットアップ（Claude の `setup:claude-plugins` と同じ考え方）。
 
 ```sh
 npm run setup:cursor-plugins          # npx skills + always-on rule
 ```
 
 Cursor Agent で **`/ponytail-review`**。詳細は [docs/cursor-plugins.md](docs/cursor-plugins.md)。Claude Code 側は `npm run setup:claude-plugins` と `.claude/settings.json`。
-
 ## ローカルで動かす
 
 Node.js 22 以上が必要です。

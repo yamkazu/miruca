@@ -15,9 +15,9 @@ npm run setup:cursor-plugins
 1. **`npx skills add DietrichGebert/ponytail -a cursor -y --skill '*'`** — 6 skills をプロジェクトの `.agents/skills/` へ（Cursor はここを自動発見）
 2. **always-on rule** — upstream の `.cursor/rules/ponytail.mdc` を取得して配置
 3. 任意で mattpocock（同じ `npx skills` パターン）
-4. pstack — `agent` / `cursor-agent` があれば marketplace 登録を試し、だめなら `/add-plugin pstack` を案内
+4. pstack — **プロジェクトスコープはコミット済み**の [`.cursor/settings.json`](../.cursor/settings.json)（`plugins.pstack.enabled`）。Customize の Project install が壊れている場合の回避策でもある。UI で入れるなら Project scope を選ぶか、同ファイルを確認して **Reload Window**
 
-生成物（`.agents/skills/`、`.cursor/rules/ponytail.mdc`、`skills-lock.json`）は gitignore。Cloud Agents も環境セットアップで同じスクリプトを回せば揃う。
+生成物（`.agents/skills/`、`.cursor/rules/ponytail.mdc`、`skills-lock.json`）は gitignore。Cloud Agents も環境セットアップで同じスクリプトを回せば揃う。pstack は settings がリポジトリにあればプロジェクトとして有効化される。
 
 Claude Code 側は従来どおり `npm run setup:claude-plugins` と `.claude/settings.json`（このスクリプトは触らない）。
 
@@ -37,7 +37,7 @@ Claude Code 側は従来どおり `npm run setup:claude-plugins` と `.claude/se
 | 名前 | Claude | Cursor |
 | --- | --- | --- |
 | ponytail | `.claude/settings.json` → `ponytail@ponytail` | `npm run setup:cursor-plugins`（npx + rule） |
-| pstack | marketplace / Actions | `/add-plugin pstack`（スクリプトが登録を試行） |
+| pstack | marketplace / Actions | **プロジェクト**: `.cursor/settings.json` → `plugins.pstack`（チーム共有）。UI は Project scope / Reload |
 | mattpocock | `mattpocock-skills@mattpocock` | `--with-mattpocock` |
 
 ポインタ: [.cursor/PONYTAIL.md](../.cursor/PONYTAIL.md)。
