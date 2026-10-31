@@ -111,7 +111,15 @@ GitHub 側の設定:
    - `AWS_DEPLOY_ROLE_ARN` = 上の ARN
    - 任意: `AWS_REGION`（既定 `ap-northeast-1`）
 
-初回だけ CDK の bootstrap が必要です（S3 バケット、ECR、CDK 用の IAM ロールを作ります）。これには強い権限が要るので、一時的に付けて外します。
+初回だけ CDK の bootstrap が必要です（S3 バケット、ECR、CDK 用の IAM ロールを作ります）。強い権限が要るので、GitHub のロールには持たせず、AWS コンソールの CloudShell（右上の `>_`）で自分の権限で実行するのがおすすめです。
+
+```sh
+npx -y aws-cdk@2 bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/ap-northeast-1
+```
+
+終わったら Actions → Deploy → Run workflow（チェックなし）で初回デプロイします。
+
+CloudShell を使えない場合は、ワークフローから bootstrap することもできます。
 
 1. ロール `miruca-github-deploy` に `AdministratorAccess` を一時的に付ける
 2. Actions → Deploy → Run workflow で「CDK bootstrap も行う」にチェックして実行
