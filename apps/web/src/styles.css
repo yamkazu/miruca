@@ -9,7 +9,7 @@
   --critical-text: #b42f2f;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --surface-0: #111110;
     --surface-1: #1a1a19;
@@ -20,21 +20,61 @@
     --critical-text: #e66767;
   }
 }
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 body {
   margin: 0;
   background: var(--surface-0);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
   line-height: 1.6;
 }
-.app { max-width: 640px; margin: 0 auto; padding: 48px 16px; }
-h1 { margin: 0; font-size: 28px; letter-spacing: 0.02em; }
-.lead { color: var(--text-secondary); margin: 4px 0 24px; }
-.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
-.message { font-size: 20px; font-weight: 600; margin: 0 0 12px; color: var(--accent); }
-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 14px; }
-dt { color: var(--text-secondary); }
-dd { margin: 0; font-variant-numeric: tabular-nums; }
-.muted { color: var(--text-secondary); margin: 0; }
-.error { color: var(--critical-text); margin: 0; }
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: 0.02em;
+}
+.lead {
+  color: var(--text-secondary);
+  margin: 4px 0 24px;
+}
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.message {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--accent);
+}
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+dt {
+  color: var(--text-secondary);
+}
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.muted {
+  color: var(--text-secondary);
+  margin: 0;
+}
+.error {
+  color: var(--critical-text);
+  margin: 0;
+}

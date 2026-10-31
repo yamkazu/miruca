@@ -1,0 +1,22 @@
+name: 雑務・保守
+description: リファクタリング、依存更新、ドキュメントなど。AI に任せるなら作成後に ai:ready ラベルを付けます。
+labels: ["type:chore"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: やること
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 注意点

@@ -1,0 +1,30 @@
+# Creates the labels the AI workflow uses. Runs once when merged, or by hand from the Actions tab.
+name: Labels
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/labels.yml]
+
+permissions:
+  issues: write
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - run: |
+          set -e
+          create() { gh label create "$1" --color "$2" --description "$3" --force; }
+          create "ai:ready"      0052cc "AI に実装を依頼する（着手トリガー）"
+          create "ai:working"    fbca04 "AI が実装中"
+          create "ai:question"   c5def5 "AI が質問中。答えて @claude で再開"
+          create "auto-merge"    0e8a16 "品質ゲートを通過し自動マージ予約済み"
+          create "needs-human"   d93f0b "人間のレビューと判断が必要"
+          create "type:feature"  a2eeef "機能追加"
+          create "type:bug"      d73a4a "バグ"
+          create "type:chore"    ededed "雑務・保守"

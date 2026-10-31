@@ -1,0 +1,32 @@
+name: バグ
+description: 期待どおりに動かないもの。AI に任せるなら作成後に ai:ready ラベルを付けます。
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: actual
+    attributes:
+      label: 起きていること
+      description: 再現手順と、実際の結果
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動き
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      description: 直ったと言える条件。再現テストを足すことを含めてください。
+      value: |
+        - [ ] 再現するテストを追加し、修正後に通る
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 注意点
+      description: ログ、スクリーンショット、関係しそうな箇所
