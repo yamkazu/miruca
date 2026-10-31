@@ -77,8 +77,8 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
-          prompt: /code-review medium ${{ github.event.pull_request.number }} --comment
-          show_full_output: true # TEMPORARY: find out why /code-review does not post; remove after
+          # Not a bare slash command: that runs as a local command whose output ends the session, so nothing gets posted.
+          prompt: Run `/code-review medium ${{ github.event.pull_request.number }} --comment`, then post every finding it reports as an inline PR comment.
           claude_args: |
             --model ${{ vars.REVIEW_MODEL || 'claude-sonnet-5-5' }}
             --append-system-prompt "Post every finding as an inline PR comment. Start the comment with [critical] if it is a serious bug or security hole, otherwise with [minor]."
