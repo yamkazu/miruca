@@ -14,6 +14,6 @@ When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the 
 
 How this repo's automation uses them (`.github/workflows/`, `scripts/gate/`):
 
-- Adding `ready-for-agent` to an issue starts Claude in GitHub Actions: it implements the issue (following any agent brief comment), verifies it and opens a PR. The label is swapped for `ai:working` while it runs.
-- When the agent finds the issue too ambiguous, it asks in a comment and applies `needs-info`. Answer, then comment `@claude` to resume.
+- Adding `ready-for-agent` to an issue starts the Claude project's routine: it opens a project thread that implements the issue (following any agent brief comment) on a `claude/` branch, verifies it and opens a PR.
+- When the agent finds the issue too ambiguous, it asks in a comment and applies `needs-info`. Answer, then ask the project thread to resume (or comment `@claude`).
 - On a PR, the quality gate applies `ready-for-human` when a person must review and merge, or `auto-merge` when it merges on its own.
