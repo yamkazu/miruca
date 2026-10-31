@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 /** Average PR lead time in hours. */
 export function averageLeadTimeHours(prs: { openedAt: string; mergedAt: string }[]): number {
@@ -9,7 +9,11 @@ export function averageLeadTimeHours(prs: { openedAt: string; mergedAt: string }
   return total / prs.length;
 }
 
-/** Commit count of a repository given as owner/repo. */
+/** Number of refs of a repository given as owner/repo. */
 export function commitCount(repo: string): string {
-  return execSync(`git ls-remote https://github.com/${repo} | wc -l`).toString();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) {
+    throw new Error('invalid repo');
+  }
+  const out = execFileSync('git', ['ls-remote', `https://github.com/${repo}`]).toString();
+  return String(out.split('\n').filter(Boolean).length);
 }
