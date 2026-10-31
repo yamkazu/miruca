@@ -78,6 +78,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
           prompt: /code-review medium ${{ github.event.pull_request.number }} --comment
+          show_full_output: true # TEMPORARY: find out why /code-review does not post; remove after
           claude_args: |
             --model ${{ vars.REVIEW_MODEL || 'claude-sonnet-5-5' }}
             --append-system-prompt "Post every finding as an inline PR comment. Start the comment with [critical] if it is a serious bug or security hole, otherwise with [minor]."
