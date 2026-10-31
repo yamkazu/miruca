@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       bootstrap:
-        description: 'CDK bootstrap も行う（初回だけ。ロールに一時的に強い権限が必要）'
+        description: "CDK bootstrap も行う（初回だけ。ロールに一時的に強い権限が必要）"
         type: boolean
         default: false
 
