@@ -1,0 +1,24 @@
+{
+  "name": "miruca",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*", "apps/*", "infra"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "npm run build -w @miruca/web && node scripts/bundle.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/core && tsc -p apps/api && tsc -p apps/collector && tsc -p apps/web && tsc -p infra",
+    "collect": "tsx apps/collector/src/cli.ts",
+    "sample": "tsx scripts/sample-data.ts",
+    "dev:api": "tsx watch apps/api/src/server.ts",
+    "dev:web": "npm run dev -w @miruca/web",
+    "deploy": "npm run build && npm run deploy -w @miruca/infra"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

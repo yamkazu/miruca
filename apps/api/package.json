@@ -1,0 +1,11 @@
+{
+  "name": "@miruca/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@miruca/core": "*",
+    "hono": "^4.6.0"
+  }
+}
