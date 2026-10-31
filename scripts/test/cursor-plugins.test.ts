@@ -4,32 +4,41 @@ import { describe, expect, it } from 'vitest';
 
 const skillNames = ['ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-gain', 'ponytail-help'] as const;
 
-describe('Cursor ponytail wiring', () => {
-  it('commits the always-on ponytail rule', () => {
-    expect(existsSync('.cursor/rules/ponytail.mdc')).toBe(true);
-    const rule = readFileSync('.cursor/rules/ponytail.mdc', 'utf8');
-    expect(rule).toMatch(/alwaysApply:\s*true/);
+describe('Cursor plugin setup (npx-centered, not vendored)', () => {
+  it('does not vendor ponytail skill bodies in .cursor/skills', () => {
+    expect(existsSync('.cursor/skills/ponytail-review/SKILL.md')).toBe(false);
+    expect(existsSync('.cursor/skills/ponytail/SKILL.md')).toBe(false);
   });
 
-  it('commits ponytail skills including review', () => {
-    for (const name of skillNames) {
-      const path = `.cursor/skills/${name}/SKILL.md`;
-      expect(existsSync(path), path).toBe(true);
-      const body = readFileSync(path, 'utf8');
-      expect(body).toMatch(new RegExp(`^name:\\s*${name}\\b`, 'm'));
-    }
+  it('documents setup as the install path', () => {
+    const pointer = readFileSync('.cursor/PONYTAIL.md', 'utf8');
+    expect(pointer).toMatch(/setup:cursor-plugins/);
+    expect(pointer).toMatch(/DietrichGebert\/ponytail/);
+    const docs = readFileSync('docs/cursor-plugins.md', 'utf8');
+    expect(docs).toMatch(/npx skills add DietrichGebert\/ponytail/);
+    expect(docs).toMatch(/\/ponytail-review/);
   });
 
-  it('ships an executable setup:cursor-plugins script that passes --check-only', () => {
+  it('ships an executable setup script that installs skills and the rule', () => {
     const script = 'scripts/setup-cursor-plugins.sh';
     expect(existsSync(script)).toBe(true);
-    const mode = statSync(script).mode;
-    // Ensure the file is executable for the owner (git may drop +x on some checkouts).
-    if ((mode & 0o111) === 0) {
+    if ((statSync(script).mode & 0o111) === 0) {
       chmodSync(script, 0o755);
     }
-    const result = spawnSync('bash', [script, '--check-only'], { encoding: 'utf8' });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toMatch(/ponytail-review/);
-  });
+
+    const install = spawnSync('bash', [script], { encoding: 'utf8', env: process.env });
+    expect(install.status, install.stderr || install.stdout).toBe(0);
+
+    for (const name of skillNames) {
+      const path = `.agents/skills/${name}/SKILL.md`;
+      expect(existsSync(path), path).toBe(true);
+      expect(readFileSync(path, 'utf8')).toMatch(new RegExp(`^name:\\s*${name}\\b`, 'm'));
+    }
+    expect(existsSync('.cursor/rules/ponytail.mdc')).toBe(true);
+    expect(readFileSync('.cursor/rules/ponytail.mdc', 'utf8')).toMatch(/alwaysApply:\s*true/);
+
+    const check = spawnSync('bash', [script, '--check-only'], { encoding: 'utf8' });
+    expect(check.status, check.stderr || check.stdout).toBe(0);
+    expect(check.stdout).toMatch(/ponytail-review/);
+  }, 120_000);
 });

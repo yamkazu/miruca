@@ -1,14 +1,16 @@
-# Upstream: ponytail
+# Ponytail on Cursor (not vendored)
 
-Vendored from [krissman/ponytail](https://github.com/krissman/ponytail) (MIT), version **4.8.4** (commit `16f29800fd26`).
+Skills and the always-on rule are **installed by setup**, not committed.
 
-| Path | Role |
+```sh
+npm run setup:cursor-plugins
+```
+
+| What | How |
 | --- | --- |
-| `.cursor/rules/ponytail.mdc` | Always-on lazy senior mode (upstream Cursor adapter) |
-| `.cursor/skills/ponytail*/SKILL.md` | Invocable skills — Cursor discovers project skills here ([docs](https://cursor.com/docs/skills)) |
+| Skills (`/ponytail-review` など) | `npx skills add DietrichGebert/ponytail -a cursor` → `.agents/skills/` |
+| Always-on rule | setup が upstream の `.cursor/rules/ponytail.mdc` を取得 |
 
-**ponytail review in Cursor:** `/ponytail-review` (skill folder `ponytail-review`).
+生成物は `.gitignore` 済み。チーム共有 = clone 後に setup を実行（Claude の `setup:claude-plugins` と同じ考え方）。
 
-Refresh from a newer release: copy upstream `.cursor/rules/ponytail.mdc` and `skills/*/SKILL.md` into these paths, then bump the version/commit above. Claude marketplace settings (`.claude/settings.json`) stay unchanged.
-
-Team init: `npm run setup:cursor-plugins` — see [docs/cursor-plugins.md](../docs/cursor-plugins.md).
+詳細: [docs/cursor-plugins.md](../docs/cursor-plugins.md) · 上流: [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)

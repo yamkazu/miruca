@@ -3,3 +3,8 @@ dist/
 cdk.out/
 *.tsbuildinfo
 .env
+
+# Cursor / agent skills & rules installed by npm run setup:cursor-plugins
+.agents/skills/
+skills-lock.json
+.cursor/rules/ponytail.mdc

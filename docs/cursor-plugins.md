@@ -1,46 +1,43 @@
 # Cursor 向けプラグイン（チーム共有）
 
-Miruca は Claude Code 用に `.claude/settings.json` でプラグインを有効化している。Cursor では **リポジトリにコミットした `.cursor/`** を正とし、全員と Cloud Agents が同じ rules / skills を使う。
+正は **セットアップスクリプト**です。ponytail の skill 本文はリポジトリにベンダーしません（Claude の `setup:claude-plugins` と同じく、clone 後に初期化）。
 
-## すぐ使う: ponytail review
-
-| Claude Code | Cursor |
-| --- | --- |
-| `/ponytail-review`（プラグイン `ponytail@ponytail`） | **`/ponytail-review`**（プロジェクト skill `.cursor/skills/ponytail-review/`） |
-
-Agent チャットで `/` を押し、`ponytail-review` を選ぶ。差分の過剰設計だけを見るレビュー（`delete` / `stdlib` / `native` / `yagni` / `shrink`）。正しさやセキュリティは通常レビュー／`REVIEW.md` 側。
-
-関連スキル（同じ場所）: `/ponytail`、`/ponytail-audit`、`/ponytail-debt`、`/ponytail-gain`、`/ponytail-help`。  
-常時の「lazy senior」ルールは `.cursor/rules/ponytail.mdc`（`alwaysApply: true`）。
-
-由来・更新手順は [.cursor/PONYTAIL.md](../.cursor/PONYTAIL.md)。上流: [krissman/ponytail](https://github.com/krissman/ponytail)（MIT）。
-
-## 初期化（チーム・クラウド）
+## 初期化
 
 ```sh
 npm run setup:cursor-plugins
-# 検証だけ: npm run setup:cursor-plugins -- --check-only
-# mattpocock もプロジェクトにコピー: npm run setup:cursor-plugins -- --with-mattpocock
+# 任意: npm run setup:cursor-plugins -- --with-mattpocock
+# 検証のみ: npm run setup:cursor-plugins -- --check-only
 ```
 
-スクリプトは次を行う。
+スクリプトが行うこと:
 
-1. コミット済みの ponytail rules / skills の存在確認（欠けていれば失敗）
-2. `agent` / `cursor-agent` があれば `cursor/plugins` marketplace を登録し、可能なら pstack を install（CLI が非対話 install 未対応なら案内だけ）
-3. 任意で `npx skills` による mattpocock 導入
+1. **`npx skills add DietrichGebert/ponytail -a cursor -y --skill '*'`** — 6 skills をプロジェクトの `.agents/skills/` へ（Cursor はここを自動発見）
+2. **always-on rule** — upstream の `.cursor/rules/ponytail.mdc` を取得して配置
+3. 任意で mattpocock（同じ `npx skills` パターン）
+4. pstack — `agent` / `cursor-agent` があれば marketplace 登録を試し、だめなら `/add-plugin pstack` を案内
 
-marketplace プラグインをスクリプトだけで必須インストールできない場合がある。そのときは Cursor の **Customize → Plugins** で **project scope** に入れるか、チャットで `/add-plugin pstack`。
+生成物（`.agents/skills/`、`.cursor/rules/ponytail.mdc`、`skills-lock.json`）は gitignore。Cloud Agents も環境セットアップで同じスクリプトを回せば揃う。
 
-Claude 側の対応スクリプト: `npm run setup:claude-plugins`（変更していない）。
+Claude Code 側は従来どおり `npm run setup:claude-plugins` と `.claude/settings.json`（このスクリプトは触らない）。
 
-## プラグイン対応表
+## ponytail review の呼び方
 
-| 名前 | Claude | Cursor（このリポジトリ） |
+| 環境 | 呼び出し |
+| --- | --- |
+| Cursor Agent | **`/ponytail-review`**（setup 後、`.agents/skills/ponytail-review`） |
+| Claude Code | `/ponytail-review`（プラグイン `ponytail@ponytail`） |
+
+関連: `/ponytail`、`/ponytail-audit`、`/ponytail-debt`、`/ponytail-gain`、`/ponytail-help`。
+
+上流の Cursor 向けフック（`cursor-hooks.js install --project`）は **ルールの代替**（レベル切替）。ルールがある間フックは注入しない。Cloud Agents は `sessionStart` を撃たないため、Miruca の既定は **npx skills + rule コピー**。
+
+## 対応表
+
+| 名前 | Claude | Cursor |
 | --- | --- | --- |
-| ponytail | `.claude/settings.json` → `ponytail@ponytail` | **コミット**: `.cursor/rules` + `.cursor/skills` |
-| pstack | marketplace + Actions | marketplace / `/add-plugin pstack`（スクリプトが登録を試行） |
-| mattpocock-skills | `mattpocock-skills@mattpocock` | 任意: `--with-mattpocock` または Customize |
+| ponytail | `.claude/settings.json` → `ponytail@ponytail` | `npm run setup:cursor-plugins`（npx + rule） |
+| pstack | marketplace / Actions | `/add-plugin pstack`（スクリプトが登録を試行） |
+| mattpocock | `mattpocock-skills@mattpocock` | `--with-mattpocock` |
 
-## なぜ in-repo か
-
-Cursor のプロジェクト skills は `.cursor/skills/**/SKILL.md` を自動発見する（[Agent Skills](https://cursor.com/docs/skills)）。ユーザースコープや個人の `~/.cursor` だけだと Cloud Agents / 他メンバーに届かない。ponytail の上流 Cursor アダプタは rules のみだが、Miruca は skills も `.cursor/skills` に置き、Claude と同じ `/ponytail-review` を Cursor で使えるようにしている。
+ポインタ: [.cursor/PONYTAIL.md](../.cursor/PONYTAIL.md)。
