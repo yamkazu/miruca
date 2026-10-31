@@ -24,16 +24,17 @@ API は CloudFront の署名付きリクエスト（OAC）しか受け付けな�
 
 Issue に `ready-for-agent` ラベルを付けると Claude が実装して PR を作り、品質ゲートを通ったものは自動でマージされます。詳しくは [docs/ai-workflow.md](docs/ai-workflow.md)。
 
-### Cursor プラグイン（チーム共有）
-
-- **pstack（プロジェクトスコープ）**: [`.cursor/settings.json`](.cursor/settings.json) にコミット済み。開いたら Reload Window。Customize で Project に入れる場合も同じファイルに載る想定。
-- **ponytail**: ベンダーせず clone 後にセットアップ（Claude の `setup:claude-plugins` と同じ考え方）。
+### Cursor プラグイン
 
 ```sh
-npm run setup:cursor-plugins          # npx skills + always-on rule
+npm run setup:cursor-plugins
+# 中身は次の2行だけ:
+#   npx skills add DietrichGebert/ponytail -a cursor
+#   npx skills add mattpocock/skills -a cursor
 ```
 
-Cursor Agent で **`/ponytail-review`**。詳細は [docs/cursor-plugins.md](docs/cursor-plugins.md)。Claude Code 側は `npm run setup:claude-plugins` と `.claude/settings.json`。
+pstack はプロジェクトスコープで [`.cursor/settings.json`](.cursor/settings.json) に有効化済み（開いたら Reload Window）。Claude Code 側は `npm run setup:claude-plugins`。
+
 ## ローカルで動かす
 
 Node.js 22 以上が必要です。
