@@ -1,6 +1,6 @@
 // Pure decision logic for the quality gate. Kept free of I/O so it can be unit-tested.
 // Design: risk is decided by what the change touches, not by who wrote it, and only the
-// lowest tier merges without a person (see docs/ai-workflow.md).
+// lowest tier merges without a person (see REVIEW.md and docs/ai-workflow.md).
 
 export const TIERS = ['low', 'medium', 'high'];
 
