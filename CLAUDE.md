@@ -23,7 +23,7 @@ GitHub からチームのパフォーマンス（PR リードタイム、レビ�
 
 - `infra/` の IAM 権限を広げる、リソースを削除する変更を Issue に書かれていないのに行う
 - 依存パッケージを Issue に書かれていないのに追加・更新する
-- `.github/`、`CLAUDE.md`、`scripts/gate/` を Issue の指示なしに変える
+- `.github/`、`CLAUDE.md`、`REVIEW.md`、`scripts/gate/` を Issue の指示なしに変える
 - テストを消す・skip して通す
 
 ## AI の作業手順
