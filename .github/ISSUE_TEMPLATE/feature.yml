@@ -1,0 +1,30 @@
+name: 機能追加
+description: 新しい機能や改善。AI に任せるなら作成後に ready-for-agent ラベルを付けます。
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景・目的
+      description: なぜ必要か、誰が何に困っているか
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      description: 満たせば完了と言える条件をチェックリストで。AI はこれを1つずつ満たしたか PR に書き、レビューもこれを基準にします。
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: 対象外
+      description: 今回はやらないこと
+  - type: textarea
+    id: notes
+    attributes:
+      label: 注意点
+      description: 触ってはいけない箇所、参考リンク、UI のイメージなど

@@ -2,8 +2,13 @@
   "name": "miruca",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "infra"],
-  "engines": { "node": ">=22" },
+  "workspaces": [
+    "apps/*",
+    "infra"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev:api": "tsx watch apps/api/src/server.ts",
     "dev:web": "npm run dev -w @miruca/web",
@@ -11,9 +16,12 @@
     "test": "vitest run",
     "typecheck": "tsc -p apps/api && tsc -p apps/web && tsc -p infra",
     "synth": "npm run build && npm run cdk -w @miruca/infra -- synth",
-    "deploy": "npm run build && npm run cdk -w @miruca/infra -- deploy"
+    "deploy": "npm run build && npm run cdk -w @miruca/infra -- deploy",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.4",
     "@types/node": "^22.10.0",
     "esbuild": "^0.25.0",
     "tsx": "^4.19.0",

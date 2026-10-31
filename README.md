@@ -20,6 +20,10 @@ CloudFront ─┬─ /*      → S3（React + Vite の静的ファイル、OAC�
 
 API は CloudFront の署名付きリクエスト（OAC）しか受け付けないため、Web Function のエンドポイント URL を直接叩いても 403 になります。
 
+## 開発の進め方
+
+Issue に `ready-for-agent` ラベルを付けると Claude が実装して PR を作り、品質ゲートを通ったものは自動でマージされます。詳しくは [docs/ai-workflow.md](docs/ai-workflow.md)。
+
 ## ローカルで動かす
 
 Node.js 22 以上が必要です。

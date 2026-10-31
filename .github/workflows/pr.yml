@@ -1,0 +1,261 @@
+# Every PR: CI -> AI review + security review -> quality gate -> auto-merge / AI fix / human.
+# Required status checks on main: "ci" and "quality-gate". See docs/ai-workflow.md.
+name: PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+env:
+  # Highest risk tier that may merge without a person: none | low | medium. Override with a repo variable.
+  AUTO_MERGE_MAX_TIER: ${{ vars.AUTO_MERGE_MAX_TIER || 'low' }}
+  HUMAN_REVIEWER: ${{ vars.HUMAN_REVIEWER || github.repository_owner }}
+  AI_AUTHORS: claude[bot]
+
+jobs:
+  reset:
+    # A new commit invalidates the previous verdict: approvals cover one commit.
+    if: github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/gate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/gate/run.mjs reset
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+  ci:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run synth
+
+  ai-review:
+    needs: ci
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    outputs:
+      result: ${{ steps.review.outputs.structured_output }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_bots: claude[bot],claude
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            You are the code reviewer for this PR. You did not write it. Follow REVIEW.md and CLAUDE.md.
+            Read the linked issue (`Closes #N` in the PR body) and check the change against its acceptance criteria.
+
+            1. Hunt for bugs: start several subagents in parallel, each looking from a different angle
+               (correctness against the acceptance criteria, edge cases and error handling, breaking API/UI behaviour, missing tests).
+               On a bug fix, check it fixes the root cause.
+            2. Verify: for every candidate finding, have a separate subagent try to disprove it with file:line evidence.
+               Keep only findings that survive. Drop style, formatting and cleanup comments (Biome covers those).
+            3. If you reviewed this PR before (see existing review comments), review only what changed since,
+               and never repeat a finding you already posted.
+            4. Post each surviving finding as an inline comment, prefixed with **Important**, **Nit** (at most 3) or
+               **Pre-existing** (bug that was already there; not the author's fault).
+            5. Classify the risk of the change:
+               - low: docs, copy, tests only, additive changes that do not alter existing behaviour or APIs
+               - medium: ordinary feature work and bug fixes in apps/
+               - high: infra/, CI workflows, auth or tokens, data deletion, dependency changes
+            6. Decide the verdict: pass (meets the acceptance criteria, no Important findings), fix (Important findings
+               the author can fix), or human (needs a product or design decision, or the issue is ambiguous).
+
+            Return the structured result. `summary` is one or two Japanese sentences that start with the finding count.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Read,Glob,Grep,Task"
+            --json-schema '{"type":"object","properties":{"tier":{"type":"string","enum":["low","medium","high"]},"verdict":{"type":"string","enum":["pass","fix","human"]},"important":{"type":"integer","minimum":0},"summary":{"type":"string"}},"required":["tier","verdict","important","summary"]}'
+
+  security-review:
+    needs: ci
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: security-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    outputs:
+      result: ${{ steps.review.outputs.structured_output }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_bots: claude[bot],claude
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Do a security review of this PR's diff only (`gh pr diff`). Look for: leaked secrets or tokens,
+            injection (command, SQL, XSS), missing authorization, over-broad IAM or CloudFront/S3 exposure,
+            unsafe handling of GitHub tokens, and new dependencies with known risk.
+            Verify every candidate with file:line evidence and drop anything you cannot show is exploitable.
+            Post each confirmed finding as an inline comment prefixed with **Security**.
+            Do not repeat findings you already posted on this PR.
+            Return the structured result. `summary` is one Japanese sentence that starts with the finding count.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep,Task"
+            --json-schema '{"type":"object","properties":{"findings":{"type":"integer","minimum":0},"summary":{"type":"string"}},"required":["findings","summary"]}'
+
+  quality-gate:
+    needs: [reset, ci, ai-review, security-review]
+    if: always() && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gate-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      action: ${{ steps.gate.outputs.action }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/gate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: gate
+        run: node scripts/gate/run.mjs decide
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CI_RESULT: ${{ needs.ci.result }}
+          REVIEW_JSON: ${{ needs.ai-review.outputs.result }}
+          SECURITY_JSON: ${{ needs.security-review.outputs.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  auto-fix:
+    # The gate sent the PR back (red CI or blocking findings). Claude fixes it with pstack and pushes,
+    # which starts this workflow again. The gate caps this at 3 rounds.
+    # Only `ai/` branches (made by GitHub Actions): a `claude/` branch belongs to a Claude project thread,
+    # which watches its own PR and answers the gate's fix request itself.
+    needs: quality-gate
+    if: always() && needs.quality-gate.outputs.action == 'fix' && startsWith(github.event.pull_request.head.ref, 'ai/')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: fix-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_bots: claude[bot],claude
+          plugin_marketplaces: https://github.com/cursor/plugins.git
+          plugins: pstack@cursor-plugins
+          additional_permissions: |
+            actions: read
+          prompt: |
+            /pstack:poteto-mode
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            BRANCH: ${{ github.event.pull_request.head.ref }}
+            FAILED RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Full autonomy: nobody is watching this run, so never stop to ask. Decide, act and report.
+            If the poteto-mode skill did not load, find it with `find ~/.claude/plugins -path '*pstack*/skills/poteto-mode/SKILL.md'`,
+            read it and the Claude Code adapter it names, and follow them.
+
+            The quality gate sent this PR back. Use the Bug fix playbook for a red CI and the Babysit playbook
+            in `threads-only` style for review findings:
+            - Red CI: read the failed logs (`gh run view ${{ github.run_id }} --log-failed`), reproduce locally, fix the root cause.
+              Never skip, disable or delete a test to get green.
+            - Findings: read the latest "品質ゲートからの修正依頼" comment and the unresolved **Important** and **Security**
+              review comments (`gh pr view --comments`). Verify each against the code. Fix the real ones as a bug class;
+              for a wrong one, leave the code and say why in one PR comment (`gh pr comment`).
+            Follow CLAUDE.md. Run `npm run lint`, `npm run typecheck`, `npm test` and `npm run synth` until all pass,
+            commit with a message that lists what you fixed, and `git push origin HEAD:${{ github.event.pull_request.head.ref }}`.
+          claude_args: |
+            --allowedTools "Edit,Write,Read,Glob,Grep,Agent,Task,Skill,TodoWrite,Bash"
+
+  deploy-after-automerge:
+    # GITHUB_TOKEN merges do not fire push events, so start the deploy once the auto-merge lands.
+    needs: quality-gate
+    if: needs.quality-gate.outputs.action == 'automerge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - run: |
+          for i in $(seq 1 60); do
+            state=$(gh pr view "$PR" --json state -q .state)
+            if [ "$state" = MERGED ]; then gh workflow run deploy.yml --ref main; exit 0; fi
+            if [ "$state" = CLOSED ]; then exit 0; fi
+            sleep 15
+          done
+          echo "PR #$PR was not merged within 15 minutes; skipping deploy" >> "$GITHUB_STEP_SUMMARY"

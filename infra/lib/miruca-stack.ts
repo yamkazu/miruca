@@ -139,10 +139,7 @@ export class MirucaStack extends Stack {
     // The CDK L2 HttpOrigin has no OAC option yet, so attach it on the API origin directly.
     const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
     const apiOriginIndex = 1; // origin 0 = S3 (default behavior), origin 1 = API
-    cfnDistribution.addPropertyOverride(
-      `DistributionConfig.Origins.${apiOriginIndex}.OriginAccessControlId`,
-      apiOac.attrId,
-    );
+    cfnDistribution.addPropertyOverride(`DistributionConfig.Origins.${apiOriginIndex}.OriginAccessControlId`, apiOac.attrId);
 
     // Let only this distribution invoke the endpoint.
     new lambda.CfnResourcePolicy(this, 'ApiResourcePolicy', {
