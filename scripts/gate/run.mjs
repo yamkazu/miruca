@@ -2,14 +2,20 @@
 //   node scripts/gate/run.mjs reset   -> a new commit arrived: drop auto-merge and the gate labels
 //   node scripts/gate/run.mjs decide  -> combine CI, AI review and security review, then act on the PR
 // Env: GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, CI_RESULT, REVIEW_JSON, SECURITY_JSON,
-//      AUTO_MERGE_MAX_TIER, AI_AUTHORS, HUMAN_REVIEWER, GITHUB_OUTPUT, GITHUB_STEP_SUMMARY
+//      AUTO_MERGE_MAX_TIER, AI_AUTHORS, AI_EMAILS, AI_BRANCH_PREFIXES, HUMAN_REVIEWER, RUN_URL,
+//      GITHUB_OUTPUT, GITHUB_STEP_SUMMARY
 import { appendFile } from 'node:fs/promises';
 import { classifyChange, decide } from './decide.mjs';
 
 const env = process.env;
 const [owner, repo] = env.GITHUB_REPOSITORY.split('/');
 const pr = Number(env.PR_NUMBER);
-const aiAuthors = (env.AI_AUTHORS || 'claude[bot]').split(',').map((s) => s.trim());
+const list = (v, d) => (v || d).split(',').map((s) => s.trim());
+const aiAuthors = list(env.AI_AUTHORS, 'claude[bot]');
+// Commits from Claude in GitHub Actions (claude[bot]) and from Claude project threads (noreply@anthropic.com).
+const aiEmails = list(env.AI_EMAILS, 'noreply@anthropic.com,41898282+claude[bot]@users.noreply.github.com');
+// Branches only AI sessions create: `ai/` from GitHub Actions, `claude/` from Claude project threads.
+const aiBranchPrefixes = list(env.AI_BRANCH_PREFIXES, 'ai/,claude/');
 const GATE_MARK = '<!-- miruca-quality-gate -->';
 export const FIX_MARK = '<!-- miruca-fix-request -->';
 const LABELS = {
@@ -81,6 +87,20 @@ async function upsertGateComment(comments, body) {
   else await gh(`/repos/${owner}/${repo}/issues/${pr}/comments`, { method: 'POST', body: payload });
 }
 
+const MAX_FIX_ROUNDS = 3;
+
+async function requestFix(fixRounds, reasons) {
+  const body = [
+    FIX_MARK,
+    `### 品質ゲートからの修正依頼（${fixRounds + 1} 回目）`,
+    '',
+    ...reasons.map((r) => `- ${r}`),
+    '',
+    'CI の失敗と、この PR のレビューコメント（Important とセキュリティ）を直して push してください。',
+  ].join('\n');
+  await gh(`/repos/${owner}/${repo}/issues/${pr}/comments`, { method: 'POST', body: JSON.stringify({ body }) });
+}
+
 const parse = (s) => {
   try {
     const v = JSON.parse(s || '');
@@ -105,12 +125,29 @@ async function main(mode) {
   }
 
   const comments = await paginate(`/repos/${owner}/${repo}/issues/${pr}/comments`);
+  const fixRounds = comments.filter((c) => c.body?.includes(FIX_MARK)).length;
+  const aiPr =
+    aiAuthors.includes(pull.user.login) ||
+    (pull.head.repo?.full_name === pull.base.repo.full_name && aiBranchPrefixes.some((p) => pull.head.ref.startsWith(p)));
 
   if (env.CI_RESULT !== 'success') {
+    // CI is red: send it back to the AI that wrote it, within the same round cap as review findings.
     await setAutoMerge(pull.node_id, false);
-    await setLabels(null);
-    await upsertGateComment(comments, `### 品質ゲート: 判定待ち\n\nCI が通っていません（${env.CI_RESULT}）。CI を直すと再判定します。`);
-    await output('action', 'none');
+    const canFix = aiPr && fixRounds < MAX_FIX_ROUNDS;
+    const ciLine = `CI が通っていません（${env.CI_RESULT}）${env.RUN_URL ? `: ${env.RUN_URL}` : ''}`;
+    if (canFix) {
+      await setLabels(null);
+      await requestFix(fixRounds, [ciLine]);
+      await upsertGateComment(
+        comments,
+        `### 品質ゲート: AI に修正を依頼\n\n- ${ciLine}\n- 自動修正 ${fixRounds + 1}/${MAX_FIX_ROUNDS} 回目`,
+      );
+    } else {
+      await setLabels(aiPr ? 'ready-for-human' : null);
+      const why = aiPr ? `\n- 自動修正が上限（${MAX_FIX_ROUNDS} 回）に達した` : '';
+      await upsertGateComment(comments, `### 品質ゲート: 判定待ち\n\n- ${ciLine}${why}\n\nCI を直すと再判定します。`);
+    }
+    await output('action', canFix ? 'fix' : 'none');
     process.exitCode = 1;
     return;
   }
@@ -120,16 +157,16 @@ async function main(mode) {
   const change = classifyChange(files);
   const review = parse(env.REVIEW_JSON);
   const security = parse(env.SECURITY_JSON);
-  const trustedAuthor = aiAuthors.includes(pull.user.login);
-  const foreignCommits = commits.some((c) => !aiAuthors.includes(c.author?.login ?? '') && !aiAuthors.includes(c.committer?.login ?? ''));
-  const fixRounds = comments.filter((c) => c.body?.includes(FIX_MARK)).length;
+  const isAiCommit = (c) => aiAuthors.includes(c.author?.login ?? '') || aiEmails.includes(c.commit.author?.email ?? '');
+  const foreignCommits = commits.some((c) => !isAiCommit(c));
 
   const result = decide({
     change,
     review,
     security,
     fixRounds,
-    trustedAuthor,
+    trustedAuthor: aiPr,
+    maxFixRounds: MAX_FIX_ROUNDS,
     foreignCommits,
     autoMergeMaxTier: env.AUTO_MERGE_MAX_TIER || 'low',
   });
@@ -165,15 +202,7 @@ async function main(mode) {
       }
     } else {
       await setLabels(null);
-      const body = [
-        FIX_MARK,
-        `### 品質ゲートからの修正依頼（${fixRounds + 1} 回目）`,
-        '',
-        ...result.reasons.map((r) => `- ${r}`),
-        '',
-        'この PR のレビューコメント（Important とセキュリティ）を直してください。',
-      ].join('\n');
-      await gh(`/repos/${owner}/${repo}/issues/${pr}/comments`, { method: 'POST', body: JSON.stringify({ body }) });
+      await requestFix(fixRounds, result.reasons);
     }
   }
 

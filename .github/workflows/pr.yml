@@ -175,21 +175,25 @@ jobs:
           CI_RESULT: ${{ needs.ci.result }}
           REVIEW_JSON: ${{ needs.ai-review.outputs.result }}
           SECURITY_JSON: ${{ needs.security-review.outputs.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   auto-fix:
-    # The gate asked for a fix: the implementing Claude addresses the findings and pushes,
+    # The gate sent the PR back (red CI or blocking findings). Claude fixes it with pstack and pushes,
     # which starts this workflow again. The gate caps this at 3 rounds.
+    # Only `ai/` branches (made by GitHub Actions): a `claude/` branch belongs to a Claude project thread,
+    # which watches its own PR and answers the gate's fix request itself.
     needs: quality-gate
-    if: always() && needs.quality-gate.outputs.action == 'fix'
+    if: always() && needs.quality-gate.outputs.action == 'fix' && startsWith(github.event.pull_request.head.ref, 'ai/')
     runs-on: ubuntu-latest
     concurrency:
       group: fix-${{ github.event.pull_request.number }}
       cancel-in-progress: false
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
       issues: write
+      actions: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -206,19 +210,32 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: claude[bot],claude
+          plugin_marketplaces: https://github.com/cursor/plugins.git
+          plugins: pstack@cursor-plugins
+          additional_permissions: |
+            actions: read
           prompt: |
+            /pstack:poteto-mode
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
             BRANCH: ${{ github.event.pull_request.head.ref }}
+            FAILED RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            The quality gate sent this PR back. Read the latest "品質ゲートからの修正依頼" comment and the unresolved
-            **Important** and **Security** review comments (`gh pr view --comments`).
-            Fix each one, fixing the whole bug class rather than only the flagged line. If a finding is wrong,
-            leave the code as is and say why in one PR comment (`gh pr comment`). Follow CLAUDE.md.
-            Then run `npm run lint`, `npm run typecheck`, `npm test` and `npm run synth` until all pass,
+            Full autonomy: nobody is watching this run, so never stop to ask. Decide, act and report.
+            If the poteto-mode skill did not load, find it with `find ~/.claude/plugins -path '*pstack*/skills/poteto-mode/SKILL.md'`,
+            read it and the Claude Code adapter it names, and follow them.
+
+            The quality gate sent this PR back. Use the Bug fix playbook for a red CI and the Babysit playbook
+            in `threads-only` style for review findings:
+            - Red CI: read the failed logs (`gh run view ${{ github.run_id }} --log-failed`), reproduce locally, fix the root cause.
+              Never skip, disable or delete a test to get green.
+            - Findings: read the latest "品質ゲートからの修正依頼" comment and the unresolved **Important** and **Security**
+              review comments (`gh pr view --comments`). Verify each against the code. Fix the real ones as a bug class;
+              for a wrong one, leave the code and say why in one PR comment (`gh pr comment`).
+            Follow CLAUDE.md. Run `npm run lint`, `npm run typecheck`, `npm test` and `npm run synth` until all pass,
             commit with a message that lists what you fixed, and `git push origin HEAD:${{ github.event.pull_request.head.ref }}`.
           claude_args: |
-            --allowedTools "Edit,Write,Read,Glob,Grep,Task,Bash(npm ci),Bash(npm run:*),Bash(npm test:*),Bash(npx biome:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*)"
+            --allowedTools "Edit,Write,Read,Glob,Grep,Agent,Task,Skill,TodoWrite,Bash"
 
   deploy-after-automerge:
     # GITHUB_TOKEN merges do not fire push events, so start the deploy once the auto-merge lands.

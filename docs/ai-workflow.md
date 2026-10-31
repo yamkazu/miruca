@@ -1,25 +1,32 @@
 # Issue 駆動の AI 開発フロー
 
-Issue に `ready-for-agent` を付けると、Claude が実装・検証して PR を作り、CI と品質ゲートを通ったものは自動でマージされます。迷うものだけ人間に回ります。
+実装は2つの入り口から始められます。どちらから作った PR も、同じ CI・品質ゲート・自動マージ・自動修正を通ります。
+
+| 入り口 | 向いている作業 | ブランチ | 実装するもの |
+| --- | --- | --- | --- |
+| Issue に `ready-for-agent` を付ける | 仕様が Issue に書き切れている作業。放っておけば PR ができる | `ai/` | GitHub Actions の Claude（pstack の poteto-mode） |
+| Claude のプロジェクトのスレッドで頼む | 相談しながら進めたい作業、仕様がまだ固まっていない作業。スマホから会話で | `claude/` | スレッドの Claude |
 
 ```
-Issue + ready-for-agent
-  → Claude が実装し、lint / 型 / テスト / synth を自分で通して PR を作る   (.github/workflows/claude.yml)
-  → CI                                                                    (pr.yml: ci)
-  → AI レビュー + セキュリティレビュー（並列）                            (pr.yml: ai-review, security-review)
-  → 品質ゲート                                                            (pr.yml: quality-gate → scripts/gate)
+Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR    (.github/workflows/claude.yml)
+スレッドで依頼 ───────────→ スレッドの Claude が実装・検証して PR
+  → CI                                                              (pr.yml: ci)
+  → AI レビュー + セキュリティレビュー（並列）                      (pr.yml: ai-review, security-review)
+  → 品質ゲート                                                      (pr.yml: quality-gate → scripts/gate)
        pass  → auto-merge ラベル + squash で自動マージ予約
-       fix   → Claude が指摘を直して push（最大 3 回）→ もう一度 CI から
-       human → ready-for-human ラベル + あなたをレビュアーに指定
-  → main にマージされたら AWS にデプロイ                                  (deploy.yml)
+       fix   → CI の失敗や指摘を Claude が直して push（最大 3 回）→ もう一度 CI から
+       human → ready-for-human ラベル（あなたが見てマージ）
+  → main にマージされたら AWS にデプロイ                            (deploy.yml)
 ```
+
+自動修正（fix）は、`ai/` ブランチなら Actions の Claude が pstack で行います（`pr.yml: auto-fix`）。`claude/` ブランチなら、その PR を作ったスレッドの Claude が品質ゲートの修正依頼コメントを受けて直します。
 
 設計は Anthropic の [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/) を参考にしています。
 
 ## あなたがやること
 
 - Issue をテンプレートで書く。**受け入れ条件**がレビューと自動マージの基準になります
-- `ready-for-agent` を付ける
+- `ready-for-agent` を付ける。またはプロジェクトのスレッドで「#12 をやって」と頼む
 - `needs-info` が付いたら質問に答え、`@claude 回答しました` とコメントして再開
 - `ready-for-human` の PR を見て、マージするか `@claude <直してほしいこと>` とコメント
 
@@ -35,9 +42,9 @@ Issue + ready-for-agent
 | 中 | apps/ の通常の機能追加・バグ修正 | 人間 |
 | 高 | `infra/`、`.github/`、`scripts/gate/`、`CLAUDE.md`・`REVIEW.md`・`biome.json`、`package.json`・lock | 人間（AI の判定に関係なく） |
 
-ほかに次のどれかに当たると人間に回ります: AI 以外が作った PR、AI 以外のコミットが混ざった PR、差分が 400 行超（lock 除く）、AI レビューが「人間の判断が必要」とした PR。
+ほかに次のどれかに当たると人間に回ります: AI 以外が作った PR（`ai/`・`claude/` 以外のブランチ）、AI 以外のコミットが混ざった PR、差分が 400 行超（lock 除く）、AI レビューが「人間の判断が必要」とした PR。
 
-次のものは**マージを止めて** Claude に修正を依頼します（3 回で直らなければ人間へ）: セキュリティの指摘、Important の指摘、ソースを変えたのにテストの変更がない。
+次のものは**マージを止めて** Claude に修正を依頼します（3 回で直らなければ人間へ）: CI の失敗、セキュリティの指摘、Important の指摘、ソースを変えたのにテストの変更がない。
 
 判定はコミット単位です。新しいコミットが来ると自動マージ予約とラベルを外して判定し直します。
 
