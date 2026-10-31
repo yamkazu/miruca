@@ -67,8 +67,6 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
-    outputs:
-      result: ${{ steps.review.outputs.structured_output }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,7 +81,6 @@ jobs:
           claude_args: |
             --model ${{ vars.REVIEW_MODEL || 'claude-sonnet-5-5' }}
             --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh:*),Bash(git:*),Read,Glob,Grep,Task,Agent"
-            --json-schema '{"type":"object","properties":{"tier":{"type":"string","enum":["low","medium","high"],"description":"low: docs or tests only; high: infra/, .github/, auth, dependencies; medium: anything else"},"verdict":{"type":"string","enum":["pass","fix","human"],"description":"pass if no findings; fix if there are findings; human if it needs a product decision"},"important":{"type":"integer","minimum":0,"description":"number of findings the review reported"},"summary":{"type":"string","description":"one Japanese sentence starting with the finding count"}},"required":["tier","verdict","important","summary"]}'
 
   security-review:
     needs: ci
@@ -98,8 +95,6 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
-    outputs:
-      result: ${{ steps.review.outputs.structured_output }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,7 +113,6 @@ jobs:
           claude_args: |
             --model ${{ vars.SECURITY_REVIEW_MODEL || 'claude-sonnet-5-5' }}
             --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh:*),Bash(git:*),Read,Glob,Grep,LS,Task,Agent"
-            --json-schema '{"type":"object","properties":{"findings":{"type":"integer","minimum":0,"description":"number of findings the review reported"},"summary":{"type":"string","description":"one Japanese sentence starting with the finding count"}},"required":["findings","summary"]}'
 
   quality-gate:
     needs: [reset, ci, ai-review, security-review]
@@ -146,8 +140,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CI_RESULT: ${{ needs.ci.result }}
-          REVIEW_JSON: ${{ needs.ai-review.outputs.result }}
-          SECURITY_JSON: ${{ needs.security-review.outputs.result }}
+          REVIEW_RESULT: ${{ needs.ai-review.result }}
+          SECURITY_RESULT: ${{ needs.security-review.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   auto-fix:

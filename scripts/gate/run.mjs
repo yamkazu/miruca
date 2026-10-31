@@ -1,7 +1,7 @@
 // Quality gate runner, called from .github/workflows/pr.yml.
 //   node scripts/gate/run.mjs reset   -> a new commit arrived: drop auto-merge and the gate labels
 //   node scripts/gate/run.mjs decide  -> combine CI, AI review and security review, then act on the PR
-// Env: GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, CI_RESULT, REVIEW_JSON, SECURITY_JSON,
+// Env: GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, CI_RESULT, REVIEW_RESULT, SECURITY_RESULT,
 //      AUTO_MERGE_MAX_TIER, AI_AUTHORS, AI_EMAILS, AI_BRANCH_PREFIXES, HUMAN_REVIEWER, RUN_URL,
 //      GITHUB_OUTPUT, GITHUB_STEP_SUMMARY
 import { appendFile } from 'node:fs/promises';
@@ -96,19 +96,10 @@ async function requestFix(fixRounds, reasons) {
     '',
     ...reasons.map((r) => `- ${r}`),
     '',
-    'CI の失敗と、この PR のレビューコメント（Important とセキュリティ）を直して push してください。',
+    'CI の失敗と、この PR のレビューコメントを直して push してください。',
   ].join('\n');
   await gh(`/repos/${owner}/${repo}/issues/${pr}/comments`, { method: 'POST', body: JSON.stringify({ body }) });
 }
-
-const parse = (s) => {
-  try {
-    const v = JSON.parse(s || '');
-    return v && typeof v === 'object' ? v : null;
-  } catch {
-    return null;
-  }
-};
 
 async function output(key, value) {
   if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `${key}=${value}\n`);
@@ -155,8 +146,14 @@ async function main(mode) {
   const files = await paginate(`/repos/${owner}/${repo}/pulls/${pr}/files`);
   const commits = await paginate(`/repos/${owner}/${repo}/pulls/${pr}/commits`);
   const change = classifyChange(files);
-  const review = parse(env.REVIEW_JSON);
-  const security = parse(env.SECURITY_JSON);
+  // Only what can be checked mechanically: did the review jobs succeed, and how many inline comments
+  // the AI left on this commit. ponytail: a review that silently skipped posting looks like "no findings".
+  const prComments = await paginate(`/repos/${owner}/${repo}/pulls/${pr}/comments`);
+  const review =
+    env.REVIEW_RESULT === 'success'
+      ? { comments: prComments.filter((c) => c.commit_id === pull.head.sha && aiAuthors.includes(c.user?.login ?? '')).length }
+      : null;
+  const security = env.SECURITY_RESULT === 'success' ? {} : null;
   const isAiCommit = (c) => aiAuthors.includes(c.author?.login ?? '') || aiEmails.includes(c.commit.author?.email ?? '');
   const foreignCommits = commits.some((c) => !isAiCommit(c));
 
@@ -177,9 +174,6 @@ async function main(mode) {
     '',
     `- リスク: **${result.tier}**（差分 ${change.linesChanged} 行）`,
     ...result.reasons.map((r) => `- ${r}`),
-    '',
-    review?.summary ? `**AI レビュー**: ${review.summary}` : '',
-    security?.summary ? `**セキュリティレビュー**: ${security.summary}` : '',
     '',
     `判定対象のコミット: ${pull.head.sha.slice(0, 7)}。新しいコミットが来ると判定し直します。`,
   ].filter((l, i, a) => l !== '' || a[i - 1] !== '');
