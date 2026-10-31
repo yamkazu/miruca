@@ -78,7 +78,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          allowed_bots: claude[bot],claude
+          allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
@@ -131,7 +131,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          allowed_bots: claude[bot],claude
+          allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
@@ -209,7 +209,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          allowed_bots: claude[bot],claude
+          allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
           plugin_marketplaces: https://github.com/cursor/plugins.git
           plugins: pstack@cursor-plugins
           additional_permissions: |
