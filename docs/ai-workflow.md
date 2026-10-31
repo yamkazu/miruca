@@ -11,7 +11,7 @@
 Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR    (.github/workflows/claude.yml)
 スレッドで依頼 ───────────→ スレッドの Claude が実装・検証して PR
   → CI                                                              (pr.yml: ci)
-  → AI レビュー + セキュリティレビュー（並列）                      (pr.yml: ai-review, security-review)
+  → AI レビュー                                                     (pr.yml: ai-review)
   → 品質ゲート                                                      (pr.yml: quality-gate → scripts/gate)
        pass  → auto-merge ラベル + squash で自動マージ予約
        fix   → CI の失敗や指摘を Claude が直して push（最大 3 回）→ もう一度 CI から
@@ -20,6 +20,8 @@ Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR
 ```
 
 自動修正（fix）は、`ai/` ブランチなら Actions の Claude が pstack で行います（`pr.yml: auto-fix`）。`claude/` ブランチなら、その PR を作ったスレッドの Claude が品質ゲートの修正依頼コメントを受けて直します。
+
+セキュリティは AI レビューではなく CodeQL で見ます（`.github/workflows/codeql.yml`）。PR・main への push・週1回（月曜朝）に JavaScript/TypeScript と GitHub Actions のワークフローを解析し、結果は PR のチェックと Security タブ → Code scanning に出ます。品質ゲートとは独立していて、マージを止めるかどうかはブランチのルールで決めます（初期設定の 5）。
 
 設計は Anthropic の [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/) を参考にしています。
 
@@ -44,7 +46,7 @@ Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR
 
 ほかに次のどれかに当たると人間に回ります: AI 以外が作った PR（`ai/`・`claude/` 以外のブランチ）、AI 以外のコミットが混ざった PR、差分が 400 行超（lock 除く）、AI レビューが「人間の判断が必要」とした PR。
 
-次のものは**マージを止めて** Claude に修正を依頼します（3 回で直らなければ人間へ）: CI の失敗、セキュリティの指摘、Important の指摘、ソースを変えたのにテストの変更がない。
+次のものは**マージを止めて** Claude に修正を依頼します（3 回で直らなければ人間へ）: CI の失敗、Important の指摘、ソースを変えたのにテストの変更がない。
 
 判定はコミット単位です。新しいコミットが来ると自動マージ予約とラベルを外して判定し直します。
 
@@ -66,7 +68,7 @@ Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR
    - Enforcement: Active
    - Bypass list: Repository admin（あなたが判断して手でマージできるように）
    - Require a pull request before merging（Required approvals は **0**。AI の承認は人間の承認として数えないので、承認必須にすると自動マージが止まります）
-   - Require status checks to pass: `ci` と `quality-gate` を追加（「Require branches to be up to date」はオフ。オンにすると main が進むたびに自動マージが止まります）
+   - Require status checks to pass: `ci` と `quality-gate` を追加。CodeQL でもマージを止めたいなら `Analyze (javascript-typescript)` と `Analyze (actions)` も追加（チェック名は CodeQL が1回動いたあとに候補に出ます）。あわせて「Require code scanning results」で CodeQL を選ぶと、重大度の高いアラートが残る PR を止められます（「Require branches to be up to date」はオフ。オンにすると main が進むたびに自動マージが止まります）
    - Block force pushes
 6. **ラベル**: Actions タブ → Labels → Run workflow（main へのマージ時にも1回動きます）
 7. 任意: Settings → Secrets and variables → Actions → Variables に `HUMAN_REVIEWER`（既定はリポジトリのオーナー）

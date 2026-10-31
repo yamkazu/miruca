@@ -1,6 +1,6 @@
 # REVIEW.md
 
-AI レビューとセキュリティレビューが読むルール。
+AI レビューが読むルール。セキュリティの静的解析は CodeQL（`.github/workflows/codeql.yml`）が別に行う。
 
 ## miruca で「壊れた」とは
 

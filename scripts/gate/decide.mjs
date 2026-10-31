@@ -44,7 +44,6 @@ const maxTier = (a, b) => (rank(a) >= rank(b) ? a : b);
  * @param {object} input
  * @param {ReturnType<typeof classifyChange>} input.change
  * @param {{ tier: string, verdict: 'pass'|'fix'|'human', important: number, summary?: string } | null} input.review
- * @param {{ findings: number, summary?: string } | null} input.security
  * @param {number} input.fixRounds     fix requests already made on this PR
  * @param {number} [input.maxFixRounds]
  * @param {boolean} input.trustedAuthor PR opened by the implementing AI
@@ -52,9 +51,9 @@ const maxTier = (a, b) => (rank(a) >= rank(b) ? a : b);
  * @param {'none'|'low'|'medium'|'high'} [input.autoMergeMaxTier]
  * @returns {{ action: 'automerge'|'fix'|'human', gatePass: boolean, tier: string, reasons: string[] }}
  */
-export function decide({ change, review, security, fixRounds, maxFixRounds = 3, trustedAuthor, foreignCommits, autoMergeMaxTier = 'low' }) {
-  if (!review || !security) {
-    return { action: 'human', gatePass: false, tier: 'high', reasons: ['AI レビューまたはセキュリティレビューが完了しなかった'] };
+export function decide({ change, review, fixRounds, maxFixRounds = 3, trustedAuthor, foreignCommits, autoMergeMaxTier = 'low' }) {
+  if (!review) {
+    return { action: 'human', gatePass: false, tier: 'high', reasons: ['AI レビューが完了しなかった'] };
   }
 
   let tier = TIERS.includes(review.tier) ? review.tier : 'high';
@@ -62,7 +61,6 @@ export function decide({ change, review, security, fixRounds, maxFixRounds = 3, 
   if (change.tooLarge) tier = maxTier(tier, 'medium');
 
   const blocking = [];
-  if (security.findings > 0) blocking.push(`セキュリティの指摘が ${security.findings} 件`);
   if (review.important > 0) blocking.push(`Important の指摘が ${review.important} 件`);
   if (review.verdict === 'fix' && review.important === 0) blocking.push('AI レビューが修正を求めている');
   if (change.sourceWithoutTests) blocking.push('ソースを変えたのにテストの変更がない');

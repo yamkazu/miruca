@@ -1,7 +1,7 @@
 // Quality gate runner, called from .github/workflows/pr.yml.
 //   node scripts/gate/run.mjs reset   -> a new commit arrived: drop auto-merge and the gate labels
-//   node scripts/gate/run.mjs decide  -> combine CI, AI review and security review, then act on the PR
-// Env: GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, CI_RESULT, REVIEW_JSON, SECURITY_JSON,
+//   node scripts/gate/run.mjs decide  -> combine CI and AI review, then act on the PR
+// Env: GITHUB_TOKEN, GITHUB_REPOSITORY, PR_NUMBER, CI_RESULT, REVIEW_JSON,
 //      AUTO_MERGE_MAX_TIER, AI_AUTHORS, AI_EMAILS, AI_BRANCH_PREFIXES, HUMAN_REVIEWER, RUN_URL,
 //      GITHUB_OUTPUT, GITHUB_STEP_SUMMARY
 import { appendFile } from 'node:fs/promises';
@@ -156,14 +156,12 @@ async function main(mode) {
   const commits = await paginate(`/repos/${owner}/${repo}/pulls/${pr}/commits`);
   const change = classifyChange(files);
   const review = parse(env.REVIEW_JSON);
-  const security = parse(env.SECURITY_JSON);
   const isAiCommit = (c) => aiAuthors.includes(c.author?.login ?? '') || aiEmails.includes(c.commit.author?.email ?? '');
   const foreignCommits = commits.some((c) => !isAiCommit(c));
 
   const result = decide({
     change,
     review,
-    security,
     fixRounds,
     trustedAuthor: aiPr,
     maxFixRounds: MAX_FIX_ROUNDS,
@@ -179,7 +177,6 @@ async function main(mode) {
     ...result.reasons.map((r) => `- ${r}`),
     '',
     review?.summary ? `**AI レビュー**: ${review.summary}` : '',
-    security?.summary ? `**セキュリティレビュー**: ${security.summary}` : '',
     '',
     `判定対象のコミット: ${pull.head.sha.slice(0, 7)}。新しいコミットが来ると判定し直します。`,
   ].filter((l, i, a) => l !== '' || a[i - 1] !== '');
