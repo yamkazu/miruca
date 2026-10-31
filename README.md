@@ -24,6 +24,17 @@ API は CloudFront の署名付きリクエスト（OAC）しか受け付けな�
 
 Issue に `ready-for-agent` ラベルを付けると Claude が実装して PR を作り、品質ゲートを通ったものは自動でマージされます。詳しくは [docs/ai-workflow.md](docs/ai-workflow.md)。
 
+### Cursor プラグイン（チーム共有）
+
+ponytail の rules / skills は `.cursor/` にコミット済みです（clone するだけで Cloud Agents も含め同じものが効きます）。
+
+```sh
+npm run setup:cursor-plugins          # 検証 + marketplace 登録の試行
+```
+
+Cursor Agent で **over-engineering レビュー**: チャットに `/ponytail-review`。  
+詳細は [docs/cursor-plugins.md](docs/cursor-plugins.md)。Claude Code 側は従来どおり `npm run setup:claude-plugins` と `.claude/settings.json`。
+
 ## ローカルで動かす
 
 Node.js 22 以上が必要です。

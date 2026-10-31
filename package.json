@@ -18,7 +18,9 @@
     "synth": "npm run build && npm run cdk -w @miruca/infra -- synth",
     "deploy": "npm run build && npm run cdk -w @miruca/infra -- deploy",
     "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint:fix": "biome check --write .",
+    "setup:claude-plugins": "bash scripts/setup-claude-plugins.sh",
+    "setup:cursor-plugins": "bash scripts/setup-cursor-plugins.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
