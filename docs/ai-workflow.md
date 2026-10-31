@@ -86,6 +86,21 @@ AWS 側の設定（AWS コンソールで1回だけ、ブラウザで可）:
    - GitHub 組織: `yamkazu`、GitHub リポジトリ: `miruca`、GitHub ブランチ: `main`
    - 許可ポリシーはここでは何も選ばずに次へ
    - ロール名: `miruca-github-deploy`
+   - 作成後、ロール → 信頼関係 → 信頼ポリシーを編集 で、条件を次の形に直す。このリポジトリの OIDC トークンの `sub` は、オーナーとリポジトリに数値 ID が付いた形式（`repo:<オーナー>@<オーナーID>/<リポジトリ>@<リポジトリID>:...`）なので、ウィザードが作る `repo:yamkazu/miruca:ref:refs/heads/main` では一致しません
+
+     ```json
+     "Condition": {
+       "StringEquals": {
+         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+         "token.actions.githubusercontent.com:sub": "repo:yamkazu@231908/miruca@1440619883:ref:refs/heads/main"
+       }
+     }
+     ```
+
+   - 実際の `sub` は次のどれかで確かめられます
+     - CloudTrail → イベント履歴で、イベント名 `AssumeRoleWithWebIdentity` を検索する。Deploy を一度実行したあと（失敗した実行でも可）、イベントの `userIdentity.userName` が `sub` です
+     - 同じアカウントで GitHub Actions から動いている別のロール（yohaku など）の信頼ポリシーの `sub` を見て、同じ形式にそろえる
+     - オーナー ID とリポジトリ ID は `https://api.github.com/repos/yamkazu/miruca` の `owner.id` と `id`
 3. 作ったロール → 許可を追加 → インラインポリシーを作成 → JSON に次を貼り、名前を `assume-cdk-roles` にして作成
 
    ```json
