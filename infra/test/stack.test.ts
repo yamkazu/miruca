@@ -26,6 +26,30 @@ describe('MirucaStack', () => {
     t.hasResourceProperties('AWS::Lambda::WebFunctionEndpoint', { AuthType: 'IamAuth', EndpointType: 'HomeRegion' });
   });
 
+  it('keeps the API code in a versioned bucket only Lambda Web Function revisions can read', () => {
+    t.hasResourceProperties('AWS::S3::Bucket', { VersioningConfiguration: { Status: 'Enabled' } });
+    t.hasResourceProperties('AWS::S3::BucketPolicy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Effect: 'Allow',
+            Principal: { Service: 'lambda.amazonaws.com' },
+            Action: ['s3:GetObject', 's3:GetObjectVersion'],
+            Condition: { ArnLike: { 'aws:SourceArn': Match.anyValue() } },
+          }),
+        ]),
+      },
+    });
+    const revision = Object.values(t.findResources('AWS::Lambda::WebFunctionRevision'))[0] as {
+      Properties: { BuildConfig: { CodeConfig: { S3Object: { Bucket: unknown; VersionId?: unknown } } } };
+      DependsOn: string[];
+    };
+    const s3Object = revision.Properties.BuildConfig.CodeConfig.S3Object;
+    expect(JSON.stringify(s3Object.Bucket)).not.toContain('cdk-hnb659fds');
+    expect(s3Object.VersionId).toBeDefined();
+    expect(revision.DependsOn.some((d) => d.startsWith('ApiCodeBucketPolicy'))).toBe(true);
+  });
+
   it('routes /api/* through CloudFront with a Lambda OAC', () => {
     t.hasResourceProperties('AWS::CloudFront::OriginAccessControl', {
       OriginAccessControlConfig: { OriginAccessControlOriginType: 'lambda', SigningBehavior: 'always-amz-auth' },
