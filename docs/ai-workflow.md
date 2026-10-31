@@ -1,6 +1,6 @@
 # Issue 駆動の AI 開発フロー
 
-実装は Claude のプロジェクトのスレッドが行います。入り口は2つあり、どちらから作った PR も、同じ CI・品質ゲート・自動マージ・自動修正を通ります。
+実装は Claude のプロジェクトのスレッドが行います。入り口は2つあり、どちらから作った PR も、同じ CI・品質ゲート・自動マージを通ります。
 
 | 入り口 | 向いている作業 | ブランチ | 実装するもの |
 | --- | --- | --- | --- |
@@ -14,12 +14,12 @@ Issue + ready-for-agent ──→ プロジェクトのルーティンがスレ�
   → AI レビュー + セキュリティレビュー（並列）                      (pr.yml: ai-review, security-review)
   → 品質ゲート                                                      (pr.yml: quality-gate → scripts/gate)
        pass  → auto-merge ラベル + squash で自動マージ予約
-       fix   → CI の失敗や指摘を Claude が直して push（最大 3 回）→ もう一度 CI から
+       fix   → 修正依頼コメントを出す。実装した Claude が直して push（最大 3 回）→ もう一度 CI から
        human → ready-for-human ラベル（あなたが見てマージ）
   → main にマージされたら AWS にデプロイ                            (deploy.yml)
 ```
 
-自動修正（fix）は、`claude/` ブランチなら、その PR を作ったスレッドの Claude が品質ゲートの修正依頼コメントを受けて直します。`@claude` コメントで Actions の Claude が作った `ai/` ブランチの PR は、Actions の Claude が pstack で直します（`pr.yml: auto-fix`）。
+Actions は指摘を出すだけで、コードは直しません。fix の修正依頼コメントを受けて直すのは、PR を作ったスレッドの Claude です（PR を見守っています）。`@claude` コメントで Actions の Claude が作った `ai/` ブランチの PR は、人間が `@claude <直してほしいこと>` とコメントして直させます。`@claude` 対応を残しているのは、スマホからコメントだけで Issue や PR の続きを頼めるようにするためです。
 
 設計は Anthropic の [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/) を参考にしています。
 
