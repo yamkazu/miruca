@@ -79,15 +79,11 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
-          prompt: |
-            Run `/code-review medium ${{ github.event.pull_request.number }} --comment`.
-            Then return: important = number of findings it posted; verdict = pass if 0, else fix;
-            tier = low (docs or tests only), high (infra/, .github/, auth, dependencies) or medium (anything else);
-            summary = one Japanese sentence starting with the finding count.
+          prompt: /code-review medium ${{ github.event.pull_request.number }} --comment
           claude_args: |
             --model ${{ vars.REVIEW_MODEL || 'claude-sonnet-5-5' }}
             --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh:*),Bash(git:*),Read,Glob,Grep,Task,Agent"
-            --json-schema '{"type":"object","properties":{"tier":{"type":"string","enum":["low","medium","high"]},"verdict":{"type":"string","enum":["pass","fix","human"]},"important":{"type":"integer","minimum":0},"summary":{"type":"string"}},"required":["tier","verdict","important","summary"]}'
+            --json-schema '{"type":"object","properties":{"tier":{"type":"string","enum":["low","medium","high"],"description":"low: docs or tests only; high: infra/, .github/, auth, dependencies; medium: anything else"},"verdict":{"type":"string","enum":["pass","fix","human"],"description":"pass if no findings; fix if there are findings; human if it needs a product decision"},"important":{"type":"integer","minimum":0,"description":"number of findings the review reported"},"summary":{"type":"string","description":"one Japanese sentence starting with the finding count"}},"required":["tier","verdict","important","summary"]}'
 
   security-review:
     needs: ci
@@ -118,13 +114,11 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: claude[bot],claude,cursor[bot],cursor,chatgpt-codex-connector[bot]
-          prompt: |
-            Run `/security-review`, and post each finding as an inline comment.
-            Return: findings = number of findings; summary = one Japanese sentence starting with the finding count.
+          prompt: /security-review
           claude_args: |
             --model ${{ vars.SECURITY_REVIEW_MODEL || 'claude-sonnet-5-5' }}
             --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh:*),Bash(git:*),Read,Glob,Grep,LS,Task,Agent"
-            --json-schema '{"type":"object","properties":{"findings":{"type":"integer","minimum":0},"summary":{"type":"string"}},"required":["findings","summary"]}'
+            --json-schema '{"type":"object","properties":{"findings":{"type":"integer","minimum":0,"description":"number of findings the review reported"},"summary":{"type":"string","description":"one Japanese sentence starting with the finding count"}},"required":["findings","summary"]}'
 
   quality-gate:
     needs: [reset, ci, ai-review, security-review]
