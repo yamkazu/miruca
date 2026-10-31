@@ -48,7 +48,7 @@ Issues live in GitHub Issues for yamkazu/miruca. See `docs/agents/issue-tracker.
 
 ### Triage labels
 
-The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`); `ready-for-agent` also starts the implementing agent in GitHub Actions. See `docs/agents/triage-labels.md`.
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`); `ready-for-agent` also starts the implementing agent in a Claude project thread (the project routine watches for the label). See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
