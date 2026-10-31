@@ -1,0 +1,23 @@
+{
+  "name": "miruca",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "infra"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev:api": "tsx watch apps/api/src/server.ts",
+    "dev:web": "npm run dev -w @miruca/web",
+    "build": "npm run build -w @miruca/web && node scripts/bundle.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p apps/api && tsc -p apps/web && tsc -p infra",
+    "synth": "npm run build && npm run cdk -w @miruca/infra -- synth",
+    "deploy": "npm run build && npm run cdk -w @miruca/infra -- deploy"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
