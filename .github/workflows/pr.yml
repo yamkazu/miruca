@@ -109,7 +109,9 @@ jobs:
         with:
           fetch-depth: 0
       # The security-review skill diffs against origin/HEAD, which actions/checkout does not set.
-      - run: git remote set-head origin ${{ github.base_ref }}
+      - run: git remote set-head origin "$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
       - id: review
         uses: anthropics/claude-code-action@v1
         with:
