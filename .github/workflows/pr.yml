@@ -83,28 +83,28 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            You are the code reviewer for this PR. You did not write it. Follow REVIEW.md and CLAUDE.md.
-            Read the linked issue (`Closes #N` in the PR body) and check the change against its acceptance criteria.
+            You are the code reviewer for this PR. You did not write it.
+            The review itself is Claude Code's built-in code-review skill. Do not write your own review.
 
-            1. Hunt for bugs: start several subagents in parallel, each looking from a different angle
-               (correctness against the acceptance criteria, edge cases and error handling, breaking API/UI behaviour, missing tests).
-               On a bug fix, check it fixes the root cause.
-            2. Verify: for every candidate finding, have a separate subagent try to disprove it with file:line evidence.
-               Keep only findings that survive. Drop style, formatting and cleanup comments (Biome covers those).
-            3. If you reviewed this PR before (see existing review comments), review only what changed since,
-               and never repeat a finding you already posted.
-            4. Post each surviving finding as an inline comment, prefixed with **Important**, **Nit** (at most 3) or
-               **Pre-existing** (bug that was already there; not the author's fault).
-            5. Classify the risk of the change:
-               - low: docs, copy, tests only, additive changes that do not alter existing behaviour or APIs
-               - medium: ordinary feature work and bug fixes in apps/
-               - high: infra/, CI workflows, auth or tokens, data deletion, dependency changes
-            6. Decide the verdict: pass (meets the acceptance criteria, no Important findings), fix (Important findings
-               the author can fix), or human (needs a product or design decision, or the issue is ambiguous).
-
-            Return the structured result. `summary` is one or two Japanese sentences that start with the finding count.
+            1. Read REVIEW.md and CLAUDE.md, and the linked issue (`Closes #N` in the PR body, `gh issue view N`).
+               Give their rules and the issue's acceptance criteria to the skill's reviewers as extra context.
+            2. Run the skill with the Skill tool: skill `code-review`, args `medium ${{ github.event.pull_request.number }} --comment`.
+               Follow its instructions as written (fan-out, verification, posting). Two additions for posting:
+               - Start each inline comment with **Important** (breaks something listed in REVIEW.md, misses an acceptance
+                 criterion, or a test that does not check the behaviour) or **Nit** (everything else, cleanups included).
+               - Skip a finding that an earlier comment on this PR already made (`gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments`).
+               If the skill is not available, post nothing and return verdict `human`.
+            3. From the findings the skill reported (do not review again), return the structured result:
+               - tier: low = docs, copy, tests only, additive changes that keep existing behaviour and APIs;
+                 medium = ordinary feature work and bug fixes in apps/; high = infra/, CI workflows, auth or tokens,
+                 data deletion, dependency changes
+               - important: the number of **Important** findings
+               - verdict: pass (acceptance criteria met, no Important), fix (Important findings the author can fix),
+                 human (needs a product or design decision, or the issue is ambiguous)
+               - summary: one or two Japanese sentences that start with the finding count
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Read,Glob,Grep,Task"
+            --model ${{ vars.REVIEW_MODEL || 'claude-sonnet-5-5' }}
+            --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Glob,Grep,Task,Agent,ReportFindings"
             --json-schema '{"type":"object","properties":{"tier":{"type":"string","enum":["low","medium","high"]},"verdict":{"type":"string","enum":["pass","fix","human"]},"important":{"type":"integer","minimum":0},"summary":{"type":"string"}},"required":["tier","verdict","important","summary"]}'
 
   security-review:
@@ -126,6 +126,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # The security-review skill diffs against origin/HEAD, which actions/checkout does not set.
+      - run: git remote set-head origin ${{ github.base_ref }}
       - id: review
         uses: anthropics/claude-code-action@v1
         with:
@@ -136,15 +138,18 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Do a security review of this PR's diff only (`gh pr diff`). Look for: leaked secrets or tokens,
-            injection (command, SQL, XSS), missing authorization, over-broad IAM or CloudFront/S3 exposure,
-            unsafe handling of GitHub tokens, and new dependencies with known risk.
-            Verify every candidate with file:line evidence and drop anything you cannot show is exploitable.
-            Post each confirmed finding as an inline comment prefixed with **Security**.
-            Do not repeat findings you already posted on this PR.
-            Return the structured result. `summary` is one Japanese sentence that starts with the finding count.
+            The review itself is Claude Code's built-in security-review skill. Do not write your own review.
+
+            1. Read REVIEW.md for what counts as broken in this repo (leaked tokens, over-broad IAM, public S3, API reachable
+               without CloudFront), and give it to the skill as extra context.
+            2. Run the skill with the Skill tool: skill `security-review`. Follow its instructions as written.
+            3. Post each finding in its report as an inline comment that starts with **Security**, unless an earlier
+               comment on this PR already made it (`gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments`).
+            4. Return the structured result: findings = the number of findings in the report;
+               summary = one Japanese sentence that starts with the finding count.
           claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep,Task"
+            --model ${{ vars.SECURITY_REVIEW_MODEL || 'claude-sonnet-5-5' }}
+            --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Glob,Grep,LS,Task,Agent"
             --json-schema '{"type":"object","properties":{"findings":{"type":"integer","minimum":0},"summary":{"type":"string"}},"required":["findings","summary"]}'
 
   quality-gate:
