@@ -149,9 +149,11 @@ async function main(mode) {
   // Only what can be checked mechanically: did the review jobs succeed, and how many inline comments
   // the AI left on this commit. ponytail: a review that silently skipped posting looks like "no findings".
   const prComments = await paginate(`/repos/${owner}/${repo}/pulls/${pr}/comments`);
+  const aiComments = prComments.filter((c) => c.commit_id === pull.head.sha && aiAuthors.includes(c.user?.login ?? ''));
+  // The review prompt makes the AI start severe findings with [critical]; those fail the gate.
   const review =
     env.REVIEW_RESULT === 'success'
-      ? { comments: prComments.filter((c) => c.commit_id === pull.head.sha && aiAuthors.includes(c.user?.login ?? '')).length }
+      ? { comments: aiComments.length, critical: aiComments.filter((c) => /^\s*\[critical\]/i.test(c.body ?? '')).length }
       : null;
   const security = env.SECURITY_RESULT === 'success' ? {} : null;
   const isAiCommit = (c) => aiAuthors.includes(c.author?.login ?? '') || aiEmails.includes(c.commit.author?.email ?? '');

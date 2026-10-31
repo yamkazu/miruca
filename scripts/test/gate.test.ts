@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { classifyChange, decide } from '../gate/decide.mjs';
 
 const f = (filename: string, lines = 10) => ({ filename, additions: lines, deletions: 0 });
-const clean = { comments: 0 };
+const clean = { comments: 0, critical: 0 };
 const noSec = {};
 const base = { fixRounds: 0, trustedAuthor: true, foreignCommits: false };
 
@@ -49,11 +49,18 @@ describe('decide', () => {
   });
 
   it('asks the AI to fix blocking findings, up to the round cap', () => {
-    const review = { comments: 2 };
+    const review = { comments: 2, critical: 1 };
     expect(decide({ ...base, change: docsOnly, review, security: noSec, fixRounds: 2 }).action).toBe('fix');
     expect(decide({ ...base, change: docsOnly, review, security: noSec, fixRounds: 3 })).toMatchObject({
       action: 'human',
       gatePass: false,
+    });
+  });
+
+  it('sends non-critical comments to a human without failing the gate', () => {
+    expect(decide({ ...base, change: docsOnly, review: { comments: 2, critical: 0 }, security: noSec })).toMatchObject({
+      action: 'human',
+      gatePass: true,
     });
   });
 

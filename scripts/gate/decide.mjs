@@ -46,7 +46,7 @@ const maxTier = (a, b) => (rank(a) >= rank(b) ? a : b);
 /**
  * @param {object} input
  * @param {ReturnType<typeof classifyChange>} input.change
- * @param {{ comments: number } | null} input.review   null when the review job did not succeed; comments = inline review comments on the head commit
+ * @param {{ comments: number, critical: number } | null} input.review   null when the review job did not succeed; inline AI review comments on the head commit, and how many start with [critical]
  * @param {object | null} input.security                 null when the security-review job did not succeed
  * @param {number} input.fixRounds     fix requests already made on this PR
  * @param {number} [input.maxFixRounds]
@@ -65,7 +65,7 @@ export function decide({ change, review, security, fixRounds, maxFixRounds = 3, 
   if (change.tooLarge) tier = maxTier(tier, 'medium');
 
   const blocking = [];
-  if (review.comments > 0) blocking.push(`AI レビューのインラインコメントが ${review.comments} 件`);
+  if (review.critical > 0) blocking.push(`重大（critical）な指摘が ${review.critical} 件`);
   if (change.sourceWithoutTests) blocking.push('ソースを変えたのにテストの変更がない');
 
   if (blocking.length > 0) {
@@ -77,6 +77,7 @@ export function decide({ change, review, security, fixRounds, maxFixRounds = 3, 
   }
 
   const human = [];
+  if (review.comments > review.critical) human.push(`重大でない指摘が ${review.comments - review.critical} 件（人間が確認）`);
   if (!trustedAuthor) human.push('AI 以外が作った PR');
   if (foreignCommits) human.push('AI 以外のコミットが含まれる');
   human.push(...change.sensitive);

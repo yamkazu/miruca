@@ -80,6 +80,7 @@ jobs:
           prompt: /code-review medium ${{ github.event.pull_request.number }} --comment
           claude_args: |
             --model ${{ vars.REVIEW_MODEL || 'claude-sonnet-5-5' }}
+            --append-system-prompt "Post every finding as an inline PR comment. Start the comment with [critical] if it is a serious bug or security hole, otherwise with [minor]."
             --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh:*),Bash(git:*),Read,Glob,Grep,Task,Agent"
 
   security-review:
@@ -112,6 +113,7 @@ jobs:
           prompt: /security-review
           claude_args: |
             --model ${{ vars.SECURITY_REVIEW_MODEL || 'claude-sonnet-5-5' }}
+            --append-system-prompt "Post every finding as an inline PR comment. Start the comment with [critical] if its severity is HIGH, otherwise with [minor]."
             --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh:*),Bash(git:*),Read,Glob,Grep,LS,Task,Agent"
 
   quality-gate:
