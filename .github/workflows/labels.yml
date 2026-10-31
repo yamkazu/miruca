@@ -23,7 +23,7 @@ jobs:
           # Triage roles shared with mattpocock/skills (docs/agents/triage-labels.md)
           create "needs-triage"    ededed "メンテナが内容を確認する"
           create "needs-info"      c5def5 "情報待ち（AI の質問を含む）。答えて @claude で再開"
-          create "ready-for-agent" 0052cc "仕様が固まり AI に任せられる。付けると Claude が実装を始める"
+          create "ready-for-agent" 0052cc "仕様が固まり AI に任せられる。付けると Claude のプロジェクトが実装を始める"
           create "ready-for-human" d93f0b "Issue: 人間が実装する / PR: 人間のレビューとマージ待ち"
           create "wontfix"         ffffff "対応しない"
           # Used by this repo's workflows

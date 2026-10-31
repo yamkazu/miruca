@@ -1,13 +1,9 @@
-# Claude in GitHub Actions.
-#   implement: label an issue `ready-for-agent` and Claude implements it with pstack (poteto-mode),
-#              verifies it and opens a PR on an `ai/` branch.
-#   respond:   comment `@claude ...` on an issue or PR (repo writers only) and Claude answers, resumes or fixes.
-# PRs from Claude project threads (`claude/` branches) go through the same pr.yml gate; see docs/ai-workflow.md.
+# Claude in GitHub Actions: comment `@claude ...` on an issue or PR (repo writers only) and Claude answers or fixes.
+# Implementing a `ready-for-agent` issue is not done here: the Claude project's routine picks the label up and
+# implements it in a project thread (`claude/` branch). Every PR goes through the pr.yml gate; see docs/ai-workflow.md.
 name: Claude
 
 on:
-  issues:
-    types: [labeled]
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -19,78 +15,6 @@ permissions:
   contents: read
 
 jobs:
-  implement:
-    if: github.event_name == 'issues' && github.event.label.name == 'ready-for-agent'
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    concurrency:
-      group: claude-${{ github.event.issue.number }}
-      cancel-in-progress: false
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      actions: read
-      id-token: write
-    env:
-      ISSUE: ${{ github.event.issue.number }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-
-      - name: Mark the issue as in progress
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh label create ai:working --color fbca04 --description "AI が実装中" 2>/dev/null || true
-          gh label create needs-info --color c5def5 --description "情報待ち（AI の質問を含む）。答えて @claude で再開" 2>/dev/null || true
-          gh issue edit "$ISSUE" --add-label ai:working --remove-label ready-for-agent --remove-label needs-info
-          gh issue comment "$ISSUE" --body "実装を始めました（pstack / poteto-mode）。進捗: $RUN_URL"
-
-      - uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          plugin_marketplaces: https://github.com/cursor/plugins.git
-          plugins: pstack@cursor-plugins
-          additional_permissions: |
-            actions: read
-          prompt: |
-            /pstack:poteto-mode
-            REPO: ${{ github.repository }}
-            ISSUE: #${{ github.event.issue.number }}
-
-            Implement issue #${{ github.event.issue.number }}, verify it, and open a PR.
-            Full autonomy: nobody is watching this run, so never stop to ask. Decide, act and report.
-            If the poteto-mode skill did not load, find it with `find ~/.claude/plugins -path '*pstack*/skills/poteto-mode/SKILL.md'`,
-            read it and the Claude Code adapter it names, and follow them.
-
-            1. Read the issue and all its comments, including any agent brief (`gh issue view ${{ github.event.issue.number }} --comments`).
-               Read CLAUDE.md. Pick the poteto-mode playbook that fits (feature, bug fix, refactoring, ...).
-            2. Only a genuine product or preference call that no experiment can settle stops you. Then write no code:
-               post your questions with `gh issue comment`, run `gh issue edit ${{ github.event.issue.number }} --add-label needs-info`, and stop.
-            3. Work on a new branch `ai/issue-${{ github.event.issue.number }}-<short-slug>`. Implement the smallest change that meets
-               every acceptance criterion, with tests that prove the behaviour.
-            4. Verify: `npm run lint`, `npm run typecheck`, `npm test`, `npm run synth` must all pass. Fix until they do.
-            5. Push the branch and open the PR with `gh pr create --base main`, filling `.github/pull_request_template.md`:
-               `Closes #${{ github.event.issue.number }}`, each acceptance criterion and how you proved it, the commands you ran.
-               Never merge it. The quality gate decides what happens next.
-          claude_args: |
-            --allowedTools "Edit,Write,Read,Glob,Grep,Agent,Task,Skill,TodoWrite,Bash"
-
-      - name: Clear the in-progress label
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh issue edit "$ISSUE" --remove-label ai:working || true
-
   respond:
     if: >-
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&

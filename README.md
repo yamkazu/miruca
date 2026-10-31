@@ -22,7 +22,7 @@ API は CloudFront の署名付きリクエスト（OAC）しか受け付けな�
 
 ## 開発の進め方
 
-Issue に `ready-for-agent` ラベルを付けると Claude が実装して PR を作り、品質ゲートを通ったものは自動でマージされます。詳しくは [docs/ai-workflow.md](docs/ai-workflow.md)。
+Issue に `ready-for-agent` ラベルを付けると Claude のプロジェクトが実装して PR を作り、品質ゲートを通ったものは自動でマージされます。詳しくは [docs/ai-workflow.md](docs/ai-workflow.md)。
 
 ## ローカルで動かす
 

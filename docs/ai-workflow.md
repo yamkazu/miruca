@@ -1,14 +1,14 @@
 # Issue 駆動の AI 開発フロー
 
-実装は2つの入り口から始められます。どちらから作った PR も、同じ CI・品質ゲート・自動マージ・自動修正を通ります。
+実装は Claude のプロジェクトのスレッドが行います。入り口は2つあり、どちらから作った PR も、同じ CI・品質ゲート・自動マージ・自動修正を通ります。
 
 | 入り口 | 向いている作業 | ブランチ | 実装するもの |
 | --- | --- | --- | --- |
-| Issue に `ready-for-agent` を付ける | 仕様が Issue に書き切れている作業。放っておけば PR ができる | `ai/` | GitHub Actions の Claude（pstack の poteto-mode） |
+| Issue に `ready-for-agent` を付ける | 仕様が Issue に書き切れている作業。放っておけば PR ができる | `claude/` | プロジェクトのルーティンが起動するスレッドの Claude |
 | Claude のプロジェクトのスレッドで頼む | 相談しながら進めたい作業、仕様がまだ固まっていない作業。スマホから会話で | `claude/` | スレッドの Claude |
 
 ```
-Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR    (.github/workflows/claude.yml)
+Issue + ready-for-agent ──→ プロジェクトのルーティンがスレッドを起動し、実装・検証して PR
 スレッドで依頼 ───────────→ スレッドの Claude が実装・検証して PR
   → CI                                                              (pr.yml: ci)
   → AI レビュー + セキュリティレビュー（並列）                      (pr.yml: ai-review, security-review)
@@ -19,7 +19,7 @@ Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR
   → main にマージされたら AWS にデプロイ                            (deploy.yml)
 ```
 
-自動修正（fix）は、`ai/` ブランチなら Actions の Claude が pstack で行います（`pr.yml: auto-fix`）。`claude/` ブランチなら、その PR を作ったスレッドの Claude が品質ゲートの修正依頼コメントを受けて直します。
+自動修正（fix）は、`claude/` ブランチなら、その PR を作ったスレッドの Claude が品質ゲートの修正依頼コメントを受けて直します。`@claude` コメントで Actions の Claude が作った `ai/` ブランチの PR は、Actions の Claude が pstack で直します（`pr.yml: auto-fix`）。
 
 設計は Anthropic の [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/) を参考にしています。
 
@@ -27,10 +27,10 @@ Issue + ready-for-agent ──→ Actions の Claude が実装・検証して PR
 
 - Issue をテンプレートで書く。**受け入れ条件**がレビューと自動マージの基準になります
 - `ready-for-agent` を付ける。またはプロジェクトのスレッドで「#12 をやって」と頼む
-- `needs-info` が付いたら質問に答え、`@claude 回答しました` とコメントして再開
+- `needs-info` が付いたら質問に答え、もう一度 `ready-for-agent` を付けるか、スレッドで再開を頼む
 - `ready-for-human` の PR を見て、マージするか `@claude <直してほしいこと>` とコメント
 
-ラベルは mattpocock/skills のトリアージ用ラベル（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`）に合わせています（`docs/agents/triage-labels.md`）。Claude Code で `/to-tickets` や `/triage` を使って `ready-for-agent` にした Issue は、そのまま Actions の Claude が実装を始めます。
+ラベルは mattpocock/skills のトリアージ用ラベル（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`）に合わせています（`docs/agents/triage-labels.md`）。Claude Code で `/to-tickets` や `/triage` を使って `ready-for-agent` にした Issue も、そのままプロジェクトのルーティンが拾って実装を始めます。
 
 ## 品質ゲートの判定
 
