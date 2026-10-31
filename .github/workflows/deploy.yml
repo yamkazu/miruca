@@ -8,11 +8,6 @@ on:
   # Auto-merges are made with GITHUB_TOKEN, which does not fire push events,
   # so pr.yml dispatches this workflow after an auto-merge lands.
   workflow_dispatch:
-    inputs:
-      bootstrap:
-        description: "CDK bootstrap も行う（初回だけ。ロールに一時的に強い権限が必要）"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -45,10 +40,8 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
-      # Bootstrap needs broad IAM/CloudFormation rights, so it only runs when asked for.
-      # Ordinary deploys only assume the CDK bootstrap roles (cdk-hnb659fds-*); see docs/ai-workflow.md.
-      - if: inputs.bootstrap
-        run: npm run cdk -w @miruca/infra -- bootstrap
+      # The role only assumes the CDK bootstrap roles (cdk-hnb659fds-*). Bootstrap itself is a one-time
+      # manual step in AWS CloudShell; see docs/ai-workflow.md.
       - run: npm run deploy -- --require-approval never --outputs-file cdk-outputs.json
       - name: Summary
         run: |

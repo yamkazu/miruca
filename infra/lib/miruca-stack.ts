@@ -7,7 +7,6 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import { Asset } from 'aws-cdk-lib/aws-s3-assets';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import type { Construct } from 'constructs';
 
@@ -49,16 +48,50 @@ export class MirucaStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
-    const code = new Asset(this, 'ApiCode', { path: apiCodeDir });
+    // Lambda reads Web Function code itself (as lambda.amazonaws.com), from a versioned bucket whose policy
+    // lets it in. The CDK bootstrap bucket can't be used: its policy is owned by the bootstrap stack and its
+    // AWS-managed KMS key can't grant the Lambda service. So the stack copies the zip into its own bucket.
+    const codeBucket = new s3.Bucket(this, 'ApiCodeBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      versioned: true,
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+    codeBucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        sid: 'AllowLambdaWebFunctionCodeAccess',
+        principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
+        actions: ['s3:GetObject', 's3:GetObjectVersion'],
+        resources: [codeBucket.arnForObjects('*')],
+        conditions: {
+          ArnLike: {
+            'aws:SourceArn': `arn:${this.partition}:lambda:${this.region}:${this.account}:web-function/${functionName}/revision/*`,
+          },
+        },
+      }),
+    );
+
+    const code = new s3deploy.BucketDeployment(this, 'ApiCode', {
+      sources: [s3deploy.Source.asset(apiCodeDir)],
+      destinationBucket: codeBucket,
+      extract: false,
+      // Keep old zips: a revision fails for good once the object version it is pinned to disappears.
+      prune: false,
+    });
+    const codeKey = Fn.select(0, code.objectKeys);
 
     const webFunction = new lambda.CfnWebFunction(this, 'ApiFunction', { functionName });
 
     // A revision is immutable: a code change creates a new one, and the endpoint moves all traffic to it.
     const revision = new lambda.CfnWebFunctionRevision(this, 'ApiRevision', {
       functionName,
-      description: `miruca api ${code.assetHash.slice(0, 12)}`,
+      description: 'miruca api',
       buildConfig: {
-        codeConfig: { s3Object: { bucket: code.s3BucketName, key: code.s3ObjectKey } },
+        codeConfig: {
+          s3Object: { bucket: code.deployedBucket.bucketName, key: codeKey, versionId: Fn.select(0, code.objectVersionIds) },
+        },
         runtimeConfig: { runtime: 'nodejs24.x' },
       },
       serviceConfig: {
@@ -70,7 +103,8 @@ export class MirucaStack extends Stack {
     });
     revision.node.addDependency(webFunction);
     revision.node.addDependency(role);
-    code.grantRead(role);
+    // Lambda checks its read access when the revision is created.
+    if (codeBucket.policy) revision.node.addDependency(codeBucket.policy);
 
     const endpoint = new lambda.CfnWebFunctionEndpoint(this, 'ApiEndpoint', {
       functionName,
