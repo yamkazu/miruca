@@ -40,7 +40,7 @@ Actions は指摘を出すだけで、コードは直しません。fix の修�
 | --- | --- | --- |
 | 低 | ドキュメント、文言、テストだけ、既存の動きを変えない追加 | 自動マージ |
 | 中 | apps/ の通常の機能追加・バグ修正 | 人間 |
-| 高 | `infra/`、`.github/`、`scripts/gate/`、`CLAUDE.md`・`biome.json`、`package.json`・lock | 人間（AI の判定に関係なく） |
+| 高 | `infra/`、`.github/`、`scripts/gate/`、`CLAUDE.md`・`REVIEW.md`・`biome.json`、`package.json`・lock | 人間（AI の判定に関係なく） |
 
 ほかに次のどれかに当たると人間に回ります: AI 以外が作った PR（`ai/`・`claude/` 以外のブランチ）、AI 以外のコミットが混ざった PR、差分が 400 行超（lock 除く）、AI レビューかセキュリティレビューのジョブが成功しなかった PR。
 

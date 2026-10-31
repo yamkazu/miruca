@@ -9,7 +9,7 @@ export const SENSITIVE_RULES = [
   { test: (f) => f.startsWith('infra/'), reason: 'AWS インフラ（infra/）の変更' },
   { test: (f) => f.startsWith('.github/'), reason: 'GitHub 設定・ワークフロー（.github/）の変更' },
   { test: (f) => f.startsWith('scripts/gate/'), reason: '品質ゲート自体（scripts/gate/）の変更' },
-  { test: (f) => ['CLAUDE.md', 'biome.json'].includes(f), reason: 'AI とレビューのルールの変更' },
+  { test: (f) => ['CLAUDE.md', 'REVIEW.md', 'biome.json'].includes(f), reason: 'AI とレビューのルールの変更' },
   { test: (f) => f.endsWith('package.json') || f === 'package-lock.json', reason: '依存パッケージ・npm スクリプトの変更' },
 ];
 
