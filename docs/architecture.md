@@ -13,7 +13,8 @@ flowchart TB
     s3["S3<br/>React + Vite の画面"]
     subgraph api["API（Lambda Web Functions + Hono）"]
       direction TB
-      auth["ログインとセッション"]
+      auth["ログインとセッション<br/>（GitHub、メールアドレス）"]
+      invite["招待と所属"]
       visible["visibleRepositories<br/>見てよいかの判定"]
       metrics["指標の計算<br/>（リードタイムの中央値など）"]
       gh["GitHub の入り口<br/>応答を miruca の型に変換"]
@@ -22,6 +23,7 @@ flowchart TB
     collector["定期収集"]
     ddb[("DynamoDB<br/>ユーザー、ログイン手段、セッション、<br/>組織、接続、リポジトリ")]
     sm[("Secrets Manager<br/>GitHub App の client secret、秘密鍵")]
+    ses["Amazon SES<br/>招待メール、ログイン用のリンク"]
   end
 
   subgraph ext["外部サービス"]
@@ -29,13 +31,19 @@ flowchart TB
     ghoauth["GitHub<br/>ユーザー認可（OAuth）"]
     ghapi["GitHub<br/>REST API"]
     gitlab["GitLab"]
-    idp["GitHub 以外のログイン手段<br/>（Google、SAML など）"]
+    idp["ほかのログイン手段<br/>（Google、SAML など）"]
+    mail["マネージャーのメール"]
   end
 
   user --> cf
   cf -- "/*" --> s3
   cf -- "/api/*（OAC）" --> auth
   auth --> visible --> metrics
+  auth --> invite
+  invite --> ddb
+  auth --> ses
+  invite --> ses
+  ses --> mail
   metrics --> gh
   visible --> gh
   metrics -.-> gl
@@ -56,7 +64,9 @@ flowchart TB
 - CloudFront は `/api/*` を API に、それ以外を S3 に送ります。API は CloudFront の署名付きリクエスト（OAC）しか受け付けません。ここまでは今の構成と同じです。
 - ユーザー、組織、リポジトリには miruca が ID を発行して、DynamoDB に置きます。GitHub のアカウントはログイン手段の1つ、GitHub App のインストールは組織の接続の1つとして扱います。
 - GitHub の応答は「GitHub の入り口」で miruca の型に変換します。判定と計算のコードは GitHub の型を知りません。
-- 将来は GitLab の入り口、GitHub 以外のログイン手段、定期収集を足します。0.1 では、GitHub と GitLab をまとめる共通のインターフェースは作りません。
+- マネージャーは GitHub のアカウントを持たないので、メールで届くリンクでログインします。招待メールとログイン用のリンクは SES で送ります。
+- 見てよいかの判定は `visibleRepositories` の1か所です。管理者と「全体を見る人」は組織のすべてのリポジトリを、開発者は GitHub 上でアクセスできるリポジトリを見られます。
+- 将来は GitLab の入り口、Google や SAML などのログイン手段、定期収集を足します。0.1 では、GitHub と GitLab をまとめる共通のインターフェースは作りません。
 
 ## リードタイムを表示するまで
 
@@ -68,8 +78,12 @@ sequenceDiagram
   participant G as GitHub API
 
   B->>A: GET /api/repositories/{repositoryId}/lead-time（cookie にセッション ID）
-  A->>D: セッションからユーザーとログイン手段を引く
-  A->>G: ユーザーのトークンで、アクセスできるリポジトリを取る
+  A->>D: セッションからユーザー、ログイン手段、所属を引く
+  alt 管理者か、全体を見る人
+    A->>A: 組織のすべてのリポジトリを見てよい
+  else GitHub でログインした開発者
+    A->>G: ユーザーのトークンで、アクセスできるリポジトリを取る
+  end
   A->>A: visibleRepositories で、見てよいかを判定する
   alt 見てはいけない
     A-->>B: 404
@@ -80,4 +94,4 @@ sequenceDiagram
   end
 ```
 
-ユーザーのトークンは「見てよいか」の判定にだけ使います。PR のデータは GitHub App のインストールトークンで取ります。将来、GitHub のアカウントを持たない経営者に全体を見せるときは、`visibleRepositories` の判定だけを変えれば済みます。
+ユーザーのトークンは、開発者が「見てよいか」の判定にだけ使います。PR のデータは、誰が見るときも GitHub App のインストールトークンで取ります。だから GitHub のアカウントを持たないマネージャーにも同じ数字を出せます。
