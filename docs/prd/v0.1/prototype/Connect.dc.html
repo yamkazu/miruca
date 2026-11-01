@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>miruca GitHub をつなぐ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#1f6f6a}a:hover{color:#164f4b}
+</style>
+</helmet>
+<div style="min-height: 900px; background: #f3f4f1; color: #1d2a2e; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif; font-size: 15px; line-height: 1.7">
+  <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid #d9ddd6">
+    <div style="font-weight: 700; font-size: 20px; letter-spacing: 0.02em">miruca<span style="font-weight: 400; color: #5d6b6e; font-size: 12px; margin-left: 8px">0.1</span></div>
+    <div style="display: flex; gap: 16px; align-items: center; font-size: 13px; color: #4a5759">
+      <span>sato@acme.example</span>
+      <a href="Main.dc.html">ログアウト</a>
+    </div>
+  </header>
+  <main style="max-width: 960px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <h1 style="margin: 0; font-size: 26px; line-height: 1.4">GitHub をつなぐ</h1>
+      <p style="margin: 0; color: #4a5759; max-width: 640px">まだ GitHub の組織がつながっていません。miruca の GitHub App を組織に入れると、その組織のリポジトリの PR の動きが見られるようになります。</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px">
+      <div style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 17px">App を入れてつなぐ</h2>
+        <p style="margin: 0; color: #4a5759; font-size: 14px">GitHub の画面で、App を入れる組織と、対象のリポジトリを選びます。</p>
+        <a href="Repos.dc.html" style="display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 44px; border-radius: 8px; background: #1f6f6a; color: #ffffff; font-weight: 700; text-decoration: none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          GitHub をつなぐ
+        </a>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 17px">すでに App が入っている組織をつなぐ</h2>
+        <p style="margin: 0; color: #4a5759; font-size: 14px">同じ会社のほかの人が App を入れていれば、GitHub のアカウントで確かめるだけでつなげます。</p>
+        <a href="Repos.dc.html" style="display: flex; justify-content: center; align-items: center; min-height: 44px; border-radius: 8px; border: 1px solid #1f6f6a; background: #ffffff; color: #1f6f6a; font-weight: 700; text-decoration: none">インストール済みの組織をつなぐ</a>
+      </div>
+    </div>
+    <section style="background: #e6efed; border-radius: 10px; padding: 20px 24px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 15px">miruca が GitHub で読むもの</h2>
+      <ul style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px">
+        <li>PR の情報（タイトル、作成者、作った時刻とマージした時刻、変更した行数）と、リポジトリの名前だけを読みます。</li>
+        <li>コードは読みません。GitHub に書き込むこともしません。</li>
+        <li>App を入れられるのは、GitHub の組織のオーナーです。リポジトリの管理者は、自分が管理するリポジトリだけに入れられます。それ以外の人が進めると、オーナーへの依頼になります。</li>
+      </ul>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

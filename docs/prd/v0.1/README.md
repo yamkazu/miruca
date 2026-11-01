@@ -1,6 +1,6 @@
 # PRD: miruca 0.1
 
-全体の構成図は [docs/architecture.md](../architecture.md) にある。類似プロダクトの調査は [docs/research/similar-products.md](../research/similar-products.md) にある。
+全体の構成図は [docs/architecture.md](../../architecture.md) にある。類似プロダクトの調査は [docs/research/similar-products.md](../../research/similar-products.md) にある。画面のプロトタイプは [prototype/](prototype/README.md) にある。
 
 ## 目的
 

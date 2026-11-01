@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>miruca インサイト acme-inc/web</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#1f6f6a}a:hover{color:#164f4b}
+</style>
+</helmet>
+<div style="min-height: 1900px; background: #f3f4f1; color: #1d2a2e; font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif; font-size: 15px; line-height: 1.7">
+  <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid #d9ddd6">
+    <div style="font-weight: 700; font-size: 20px; letter-spacing: 0.02em">miruca<span style="font-weight: 400; color: #5d6b6e; font-size: 12px; margin-left: 8px">0.1</span></div>
+    <div style="display: flex; gap: 16px; align-items: center; font-size: 13px; color: #4a5759">
+      <span>sato@acme.example</span>
+      <a href="Main.dc.html">ログアウト</a>
+    </div>
+  </header>
+  <main style="max-width: 1040px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-size: 13px; color: #5d6b6e"><a href="Repos.dc.html">リポジトリ</a> / acme-inc</div>
+      <h1 style="margin: 0; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 26px; font-weight: 500; line-height: 1.4">acme-inc/web</h1>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+      <fieldset style="display: flex; gap: 4px; background: #e4e7e1; border-radius: 10px; padding: 4px; margin: 0; border: 0; min-width: 0">
+        <legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">期間</legend>
+        <sc-for list="{{periods}}" as="p" hint-placeholder-count="4">
+          <sc-if value="{{p.on}}" hint-placeholder-val="{{ false }}">
+            <button type="button" aria-pressed="true" style="font: inherit; font-size: 14px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 7px; background: #ffffff; color: #1d2a2e; font-weight: 700">{{p.label}}</button>
+          </sc-if>
+          <sc-if value="{{p.off}}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{p.pick}}" aria-pressed="false" style="font: inherit; font-size: 14px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 7px; cursor: pointer; background: transparent; color: #4a5759">{{p.label}}</button>
+          </sc-if>
+        </sc-for>
+      </fieldset>
+      <span style="font-size: 13px; color: #4a5759">{{rangeText}}</span>
+    </div>
+
+    <section aria-label="概要" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+      <div style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 16px 18px">
+        <div style="font-size: 12px; color: #4a5759">リードタイムの中央値</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 30px; font-weight: 500; line-height: 1.3">{{medianText}}<span style="font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 14px; color: #4a5759; margin-left: 4px">時間</span></div>
+        <div style="font-size: 12px; color: #4a5759">作ってからマージまで</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 16px 18px">
+        <div style="font-size: 12px; color: #4a5759">マージされた PR</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 30px; font-weight: 500; line-height: 1.3">{{summary.merged}}</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 16px 18px">
+        <div style="font-size: 12px; color: #4a5759">作られた PR</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 30px; font-weight: 500; line-height: 1.3">{{summary.opened}}</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 16px 18px">
+        <div style="font-size: 12px; color: #4a5759">マージされずに閉じた PR</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 30px; font-weight: 500; line-height: 1.3">{{summary.closedUnmerged}}</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 16px 18px">
+        <div style="font-size: 12px; color: #4a5759">今開いている PR</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 30px; font-weight: 500; line-height: 1.3">{{summary.openNow}}</div>
+      </div>
+    </section>
+
+    <sc-if value="{{showChart}}" hint-placeholder-val="{{ true }}">
+      <section style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 16px">日ごとにマージされた PR</h2>
+        <div style="overflow-x: auto">
+          <div role="img" aria-label="{{chartLabel}}" style="display: flex; align-items: flex-end; gap: 4px; height: 160px; min-width: 420px; border-bottom: 1px solid #c4cac2; padding-top: 16px">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="7">
+              <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%">
+                <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #4a5759">{{b.countText}}</span>
+                <div style="width: 100%; max-width: 40px; height: {{b.h}}px; background: #1f6f6a; border-radius: 3px 3px 0 0"></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 4px; min-width: 420px; padding-top: 6px">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="7">
+              <span style="flex: 1 1 0; text-align: center; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #4a5759">{{b.label}}</span>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <section style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; overflow: hidden">
+      <h2 style="margin: 0; font-size: 16px; padding: 16px 20px; border-bottom: 1px solid #d9ddd6">人ごと（マージされた PR）</h2>
+      <div style="overflow-x: auto">
+        <table style="border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px">
+          <thead>
+            <tr>
+              <th scope="col" style="text-align: left; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">作成者</th>
+              <th scope="col" style="text-align: right; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">PR</th>
+              <th scope="col" style="text-align: right; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">追加した行</th>
+              <th scope="col" style="text-align: right; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">削除した行</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{contributors}}" as="c" hint-placeholder-count="4">
+              <tr>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec">{{c.author}}</td>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{c.prs}}</td>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #1f5f5b">+{{c.additions}}</td>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #8a4f00">−{{c.deletions}}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section style="background: #ffffff; border: 1px solid #d9ddd6; border-radius: 10px; overflow: hidden">
+      <h2 style="margin: 0; font-size: 16px; padding: 16px 20px; border-bottom: 1px solid #d9ddd6">マージされた PR（リードタイムの長い順）</h2>
+      <div style="overflow-x: auto">
+        <table style="border-collapse: collapse; width: 100%; min-width: 680px; font-size: 14px">
+          <thead>
+            <tr>
+              <th scope="col" style="text-align: left; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">PR</th>
+              <th scope="col" style="text-align: left; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">タイトル</th>
+              <th scope="col" style="text-align: left; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">作成者</th>
+              <th scope="col" style="text-align: right; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">変更した行</th>
+              <th scope="col" style="text-align: right; font-size: 12px; font-weight: 500; color: #4a5759; padding: 10px 20px; border-bottom: 1px solid #e6e9e3">リードタイム（時間）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{mergedList}}" as="pr" hint-placeholder-count="6">
+              <tr>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; color: #1f6f6a">#{{pr.number}}</td>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec">{{pr.title}}</td>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec; white-space: nowrap">{{pr.author}}</td>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap"><span style="color: #1f5f5b">+{{pr.additions}}</span> <span style="color: #8a4f00">−{{pr.deletions}}</span></td>
+                <td style="padding: 10px 20px; border-bottom: 1px solid #eef0ec; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{pr.leadText}}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p style="margin: 0; font-size: 12px; color: #4a5759">PR から読み取れる範囲の数字です。PR を通さずに直接 push されたコミットは数えていません。PR の番号は GitHub へのリンクで、GitHub でこのリポジトリを見られる人だけが開けます。表示しているのはサンプルのデータです。</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { period: '1w' };
+  }
+
+  renderVals() {
+    const PERIODS = [
+      { id: '1d', label: '1日', hours: 24 },
+      { id: '3d', label: '3日', hours: 72 },
+      { id: '1w', label: '1週間', hours: 168 },
+      { id: '1m', label: '1か月', hours: 720 },
+    ];
+    const PRS = [
+      { number: 482, title: '決済画面のエラーメッセージを直す', author: 'tanaka-k', created: 30, merged: 6, closed: null, additions: 42, deletions: 18 },
+      { number: 481, title: 'ログイン後のリダイレクト先を保持する', author: 'sato-hanako', created: 20, merged: 15, closed: null, additions: 88, deletions: 12 },
+      { number: 480, title: 'Dependabot: vite を更新', author: 'dependabot', created: 50, merged: 49, closed: null, additions: 6, deletions: 6 },
+      { number: 479, title: '注文一覧に絞り込みを追加', author: 'yamada-r', created: 96, merged: 40, closed: null, additions: 310, deletions: 44 },
+      { number: 478, title: '商品画像の遅延読み込み', author: 'suzuki-m', created: 80, merged: 62, closed: null, additions: 120, deletions: 35 },
+      { number: 477, title: '在庫 API のタイムアウトを延ばす', author: 'tanaka-k', created: 75, merged: 70, closed: null, additions: 9, deletions: 3 },
+      { number: 476, title: '管理画面の権限チェックを1か所にまとめる', author: 'ito-y', created: 190, merged: 100, closed: null, additions: 260, deletions: 410 },
+      { number: 475, title: 'メール配信のテンプレートを分割', author: 'sato-hanako', created: 150, merged: 110, closed: null, additions: 180, deletions: 160 },
+      { number: 474, title: 'カート計算のテストを足す', author: 'yamada-r', created: 140, merged: 130, closed: null, additions: 220, deletions: 0 },
+      { number: 473, title: '検索結果のページングを直す', author: 'suzuki-m', created: 260, merged: 145, closed: null, additions: 64, deletions: 30 },
+      { number: 472, title: '古い決済ライブラリを外す試み', author: 'ito-y', created: 120, merged: null, closed: 60, additions: 40, deletions: 900 },
+      { number: 471, title: '配送日の祝日対応', author: 'ito-y', created: 480, merged: 200, closed: null, additions: 140, deletions: 22 },
+      { number: 470, title: 'README のセットアップ手順を更新', author: 'tanaka-k', created: 230, merged: 228, closed: null, additions: 30, deletions: 12 },
+      { number: 469, title: 'CSV 出力の文字化けを直す', author: 'yamada-r', created: 330, merged: 300, closed: null, additions: 18, deletions: 7 },
+      { number: 468, title: 'トップページの読み込みを速くする', author: 'suzuki-m', created: 420, merged: 360, closed: null, additions: 95, deletions: 140 },
+      { number: 467, title: 'Dependabot: hono を更新', author: 'dependabot', created: 400, merged: 399, closed: null, additions: 4, deletions: 4 },
+      { number: 466, title: 'お気に入り機能の下書き', author: 'sato-hanako', created: 500, merged: null, closed: 450, additions: 300, deletions: 10 },
+      { number: 465, title: '注文確認メールに配送日を入れる', author: 'tanaka-k', created: 560, merged: 520, closed: null, additions: 52, deletions: 9 },
+      { number: 464, title: 'ログの出力を JSON にそろえる', author: 'ito-y', created: 640, merged: 600, closed: null, additions: 76, deletions: 81 },
+      { number: 463, title: 'クーポンの有効期限を表示', author: 'yamada-r', created: 700, merged: 650, closed: null, additions: 48, deletions: 5 },
+      { number: 462, title: 'ヘッダーのスマホ表示を直す', author: 'suzuki-m', created: 710, merged: 690, closed: null, additions: 33, deletions: 21 },
+      { number: 483, title: '検索のサジェストを足す', author: 'yamada-r', created: 10, merged: null, closed: null, additions: 140, deletions: 8 },
+      { number: 484, title: '在庫切れの通知', author: 'suzuki-m', created: 4, merged: null, closed: null, additions: 60, deletions: 2 },
+      { number: 460, title: '支払い方法の追加（作業中）', author: 'ito-y', created: 900, merged: null, closed: null, additions: 410, deletions: 30 },
+    ];
+
+    const period = PERIODS.find((p) => p.id === this.state.period) || PERIODS[2];
+    const H = period.hours;
+    const now = new Date(2026, 10, 1, 9, 0);
+    const fmt = (d) => `${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const since = new Date(now.getTime() - H * 3600 * 1000);
+
+    const merged = PRS.filter((p) => p.merged !== null && p.merged <= H);
+    const lead = (p) => p.created - p.merged;
+    const leads = merged.map(lead).sort((a, b) => a - b);
+    let median = null;
+    if (leads.length) {
+      const m = Math.floor(leads.length / 2);
+      median = leads.length % 2 ? leads[m] : (leads[m - 1] + leads[m]) / 2;
+    }
+
+    const summary = {
+      opened: PRS.filter((p) => p.created <= H).length,
+      merged: merged.length,
+      closedUnmerged: PRS.filter((p) => p.merged === null && p.closed !== null && p.closed <= H).length,
+      openNow: PRS.filter((p) => p.merged === null && p.closed === null).length,
+    };
+
+    const days = period.id === '1w' ? 7 : period.id === '1m' ? 30 : 0;
+    const counts = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const c = merged.filter((p) => Math.floor(p.merged / 24) === i).length;
+      const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
+      counts.push({ i, c, label: `${d.getMonth() + 1}/${d.getDate()}` });
+    }
+    const max = Math.max(1, ...counts.map((x) => x.c));
+    const bars = counts.map((x, idx) => ({
+      h: x.c ? Math.max(4, Math.round((x.c / max) * 120)) : 0,
+      countText: x.c ? String(x.c) : '',
+      label: days === 30 && idx % 5 !== 4 ? '' : x.label,
+    }));
+
+    const byAuthor = {};
+    merged.forEach((p) => {
+      const a = byAuthor[p.author] || (byAuthor[p.author] = { author: p.author, prs: 0, additions: 0, deletions: 0 });
+      a.prs += 1;
+      a.additions += p.additions;
+      a.deletions += p.deletions;
+    });
+    const contributors = Object.values(byAuthor).sort((a, b) => b.prs - a.prs || b.additions - a.additions);
+
+    const mergedList = merged
+      .map((p) => ({ ...p, leadText: lead(p).toFixed(1) }))
+      .sort((a, b) => lead(b) - lead(a));
+
+    return {
+      periods: PERIODS.map((p) => {
+        const on = p.id === period.id;
+        return {
+          label: p.label,
+          on,
+          off: !on,
+          pick: () => this.setState({ period: p.id }),
+        };
+      }),
+      rangeText: `${fmt(since)} から ${fmt(now)} まで`,
+      summary,
+      medianText: median === null ? '–' : median.toFixed(1),
+      showChart: days > 0,
+      chartLabel: `日ごとにマージされた PR の数。最大 ${max} 件`,
+      bars,
+      contributors,
+      mergedList,
+    };
+  }
+}
+</script>
+</body>
+</html>
