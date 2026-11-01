@@ -311,22 +311,27 @@ type RepositoryInsights = {
 
 ## ローカルでの起動
 
-人も AI も、AWS と GitHub がなくても 0.1 の全部の画面を手元で動かして確かめられるようにする。今の `npm run dev:api` と `npm run dev:web` の2つで起動する形は変えない。
+人も AI も、AWS と GitHub がなくても 0.1 の全部の画面を手元で動かして確かめられるようにする。`npm run dev:services` で MiniStack を起動し、`npm run dev:api` と `npm run dev:web` でアプリを起動する。
 
-AWS と GitHub に頼る部分は、`MIRUCA_ENV=local` のときだけ次のものに置き換える。
+AWS と GitHub に頼る部分は、`MIRUCA_ENV=local` のときだけ次のものに置き換える。切り替えは `MIRUCA_ENV` の1つだけで行い、項目ごとの環境変数は作らない。ローカル専用のログインだけが本番で有効になる、といった組み合わせを作れないようにするため。
 
 | 本番 | ローカル | 理由 |
 | --- | --- | --- |
-| DynamoDB | DynamoDB Local（Docker の `amazon/dynamodb-local`） | 本番と同じコードで読み書きを確かめるため。保存のコードを2つ持たない |
-| Secrets Manager | `.env.local` | 開発用の GitHub App の値を置く。リポジトリにはコミットしない |
-| Amazon SES | メールを送らず、本文とリンクを API のログに出す | ログインを、メールなしで最後まで進められるようにするため |
+| DynamoDB | MiniStack の DynamoDB | 本番と同じ AWS SDK のコードで、接続先だけを変えて読み書きを確かめるため |
+| Secrets Manager | MiniStack の Secrets Manager | 値を読むコードを本番と同じ1つにするため。サンプルの GitHub ではダミーの値を、開発用の GitHub App では自分の値を、準備のスクリプトで入れる |
+| Amazon SES | MiniStack の SES | 本番と同じ SES のコードで送り、送ったメールを `GET /_ministack/ses/messages` で読むため |
 | GitHub | サンプルの GitHub か、開発用の GitHub App | サンプルは、決まった組織、リポジトリ、PR を返す。GitHub のアカウントも App もなしで全部の画面を確かめられ、テストでも同じデータを使う。開発用の App は、GitHub との連携そのものを確かめるときに使う |
 | CloudFront の `/api/*` の振り分け | Vite の proxy（今のまま） | |
 
+- MiniStack（`ministackorg/ministack`）は、AWS の DynamoDB、SES、Secrets Manager などを1つのコンテナで真似る。`compose.yaml` に置き、`npm run dev:services`（`docker compose up`）で起動する。
+- MiniStack は `latest` を使う。テストが急に落ちたときは、MiniStack の更新が原因のこともある。
+- MiniStack のデータはメモリ上だけに持つ。起動するたびに、準備のスクリプトがテーブル、サンプルのユーザー、SES の送信元の確認、秘密情報を入れ直す。準備のスクリプトは何度動かしても同じ結果になるように作る。
+- テストは `POST /_ministack/reset` で中身を空にしてから始める。CI（`.github/workflows/pr.yml`）でも、同じイメージをサービスとして起動する。
+- MiniStack で本物の AWS と動きが違う部分があっても、ローカルだけの別の道は作らない。本物の AWS でも同じコードで正しく動く書き方で避ける。
+- ローカルでは、ログイン画面に「サンプルのユーザーとして入る」を出す。既定は `sample@miruca.local` で、メールアドレスを指定すれば別のユーザーにもなれる（`POST /api/dev/login`）。
 - サンプルの GitHub は、「GitHub の入り口」と同じ型を返すもう1つの実装にする。判定と計算のコードは、どちらにつながっているかを知らない。
 - サンプルの GitHub のときは、「GitHub をつなぐ」を押すと、GitHub の画面を通らずにサンプルの組織がつながる。
-- 運営者用のスクリプトも、ローカルの DynamoDB に向けて動かせるようにする。
-- Claude のクラウドのセッションでも、`dockerd` を起動すれば DynamoDB Local が動くことを確かめた。
+- 運営者用のスクリプトも、MiniStack に向けて動かせるようにする。
 
 ## 成功の基準
 
@@ -336,7 +341,7 @@ AWS と GitHub に頼る部分は、`MIRUCA_ENV=local` のときだけ次のも�
 
 ## Issue の分け方
 
-0. ローカルで起動できるようにする。DynamoDB Local、ログに出すメール、ローカル専用のログインと、それが使うユーザーとセッションの保存を用意する（「ローカルでの起動」）。DynamoDB を読み書きする AWS SDK の追加を、この Issue に明記する。
+0. ローカルで起動できるようにする。MiniStack、ローカル専用のログインと、それが使うユーザーとセッションの保存を用意する（「ローカルでの起動」）。AWS SDK の追加と `.github/workflows/pr.yml` の変更を、この Issue に明記する。
 1. メールアドレスでログイン、ログアウトする。運営者用のスクリプトでメールアドレスを許可する（F1、「利用の許可」）。
 2. GitHub をつなぐ。サンプルの GitHub も用意する（F2）。
 3. リポジトリの一覧とインサイトを出す（F3、F4）。人ごとの表と棒グラフは、別の Issue に分けてもよい。
