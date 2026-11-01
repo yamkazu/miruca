@@ -17,7 +17,7 @@ flowchart TB
       auth["ログインとセッション<br/>（メールで届くリンク）"]
       connect["GitHub をつなぐ"]
       visible["visibleRepositories<br/>見てよいかの判定"]
-      metrics["指標の計算<br/>（リードタイムの中央値など）"]
+      metrics["インサイトの計算<br/>（件数、リードタイム、人ごとの量）"]
       gh["GitHub の入り口<br/>応答を miruca の型に変換"]
       gl["GitLab の入り口"]
     end
@@ -93,7 +93,7 @@ sequenceDiagram
   A-->>B: リポジトリの一覧へ
 ```
 
-## リードタイムを表示するまで
+## インサイトを表示するまで
 
 ```mermaid
 sequenceDiagram
@@ -102,14 +102,14 @@ sequenceDiagram
   participant D as DynamoDB
   participant G as GitHub API
 
-  B->>A: GET /api/repositories/{repositoryId}/lead-time（cookie にセッション ID）
+  B->>A: GET /api/repositories/{repositoryId}/insights?period=1w（cookie にセッション ID）
   A->>D: セッションからユーザーと接続を引く
   A->>A: visibleRepositories で、見てよいかを判定する
   alt 見てはいけない
     A-->>B: 404
   else 見てよい
-    A->>G: インストールトークンで、直近30日にマージされた PR を取る（GraphQL の検索）
-    A->>A: リードタイムと中央値を計算する
-    A-->>B: LeadTimeReport
+    A->>G: インストールトークンで、期間内に作られた、マージされた、閉じた PR を取る（GraphQL の検索）
+    A->>A: 件数、リードタイム、日ごとの数、人ごとの量を計算する
+    A-->>B: RepositoryInsights
   end
 ```
