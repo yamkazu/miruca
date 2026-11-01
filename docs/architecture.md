@@ -5,46 +5,49 @@
 ## 全体の構成
 
 ```mermaid
-flowchart LR
-  user["使う人<br/>（ブラウザ）"]
+flowchart TB
+  user["使う人（ブラウザ）"]
 
   subgraph aws["AWS"]
     cf["CloudFront"]
     s3["S3<br/>React + Vite の画面"]
     subgraph api["API（Lambda Web Functions + Hono）"]
+      direction TB
       auth["ログインとセッション"]
       visible["visibleRepositories<br/>見てよいかの判定"]
       metrics["指標の計算<br/>（リードタイムの中央値など）"]
       gh["GitHub の入り口<br/>応答を miruca の型に変換"]
       gl["GitLab の入り口"]
     end
+    collector["定期収集"]
     ddb[("DynamoDB<br/>ユーザー、ログイン手段、セッション、<br/>組織、接続、リポジトリ")]
     sm[("Secrets Manager<br/>GitHub App の client secret、秘密鍵")]
-    collector["定期収集"]
   end
 
-  subgraph github["GitHub"]
-    ghoauth["ユーザー認可（OAuth）"]
-    ghapi["REST API"]
+  subgraph ext["外部サービス"]
+    direction LR
+    ghoauth["GitHub<br/>ユーザー認可（OAuth）"]
+    ghapi["GitHub<br/>REST API"]
+    gitlab["GitLab"]
+    idp["GitHub 以外のログイン手段<br/>（Google、SAML など）"]
   end
-  gitlab["GitLab"]
-  idp["GitHub 以外のログイン手段<br/>（Google、SAML など）"]
 
   user --> cf
   cf -- "/*" --> s3
-  cf -- "/api/*（OAC）" --> api
-  auth --> ddb
-  auth --> ghoauth
-  auth -.-> idp
-  visible --> ddb
-  visible --> gh
+  cf -- "/api/*（OAC）" --> auth
+  auth --> visible --> metrics
   metrics --> gh
-  gh --> sm
-  gh --> ghapi
+  visible --> gh
   metrics -.-> gl
-  gl -.-> gitlab
   collector -.-> gh
+  auth --> ddb
+  visible --> ddb
   collector -.-> ddb
+  gh --> sm
+  auth --> ghoauth
+  gh --> ghapi
+  gl -.-> gitlab
+  auth -.-> idp
 
   classDef future stroke-dasharray: 5 5
   class gl,collector,idp,gitlab future
