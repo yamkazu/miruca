@@ -1,0 +1,70 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-01T09:00:00Z" },
+  "title": "miruca 0.1 プロトタイプ",
+  "launch": { "view": "focused", "file": "Main.dc.html" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1280, "h": 800, "title": "1. ログイン", "expand": "fill", "is_interactive": true },
+    "Sent.dc.html": { "x": 1360, "y": 0, "w": 1280, "h": 800, "title": "2. メールを送りました", "expand": "fill", "is_interactive": true },
+    "Verify.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "3. メールのリンクを開いた画面",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Connect.dc.html": {
+      "x": 0,
+      "y": 1200,
+      "w": 1280,
+      "h": 900,
+      "title": "4. GitHub をつなぐ前",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Repos.dc.html": {
+      "x": 1360,
+      "y": 1200,
+      "w": 1280,
+      "h": 900,
+      "title": "5. リポジトリの一覧",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Insights.dc.html": { "x": 0, "y": 2500, "w": 1280, "h": 1900, "title": "6. インサイト", "expand": "fill", "is_interactive": true },
+    "InsightsEmpty.dc.html": {
+      "x": 1360,
+      "y": 2500,
+      "w": 1280,
+      "h": 800,
+      "title": "7. インサイト（PR の動きがないとき）",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Sent.dc.html",
+    "Verify.dc.html",
+    "Connect.dc.html",
+    "Repos.dc.html",
+    "Insights.dc.html",
+    "InsightsEmpty.dc.html"
+  ],
+  "notes": {
+    "t1": { "x": 0, "y": -300, "text": "ログイン（メールで届くリンク）", "kind": "title1", "maxW": 4000 },
+    "t2": { "x": 0, "y": 900, "text": "GitHub をつなぐ", "kind": "title1", "maxW": 2640 },
+    "t3": { "x": 0, "y": 2200, "text": "インサイト（PR から読み取れる範囲）", "kind": "title1", "maxW": 2640 },
+    "s1": {
+      "x": 2720,
+      "y": 1200,
+      "w": 420,
+      "text": "試作です。データはサンプルで、どのボタンも次の画面へ進むだけです。\n\nPlay で画面 1 から順に進めます。インサイトの画面は期間を切り替えられます。",
+      "fill": "orange"
+    }
+  },
+  "designSystems": []
+}
