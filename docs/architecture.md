@@ -7,66 +7,91 @@
 ```mermaid
 flowchart TB
   user["使う人（ブラウザ）"]
+  op["運営者"]
 
   subgraph aws["AWS"]
     cf["CloudFront"]
     s3["S3<br/>React + Vite の画面"]
     subgraph api["API（Lambda Web Functions + Hono）"]
       direction TB
-      auth["ログインとセッション<br/>（GitHub、メールアドレス）"]
-      invite["招待と所属"]
+      auth["ログインとセッション<br/>（メールで届くリンク）"]
+      connect["GitHub をつなぐ"]
       visible["visibleRepositories<br/>見てよいかの判定"]
       metrics["指標の計算<br/>（リードタイムの中央値など）"]
       gh["GitHub の入り口<br/>応答を miruca の型に変換"]
       gl["GitLab の入り口"]
     end
+    script["運営者用のスクリプト<br/>メールアドレスを許可する"]
     collector["定期収集"]
-    ddb[("DynamoDB<br/>ユーザー、ログイン手段、セッション、<br/>組織、接続、リポジトリ")]
+    ddb[("DynamoDB<br/>ユーザー、許可したメールアドレス、<br/>セッション、接続、リポジトリ")]
     sm[("Secrets Manager<br/>GitHub App の client secret、秘密鍵")]
-    ses["Amazon SES<br/>招待メール、ログイン用のリンク"]
+    ses["Amazon SES<br/>ログイン用のリンク"]
   end
 
   subgraph ext["外部サービス"]
     direction LR
-    ghoauth["GitHub<br/>ユーザー認可（OAuth）"]
-    ghapi["GitHub<br/>REST API"]
+    ghapi["GitHub<br/>App のインストール、REST API、GraphQL API"]
     gitlab["GitLab"]
-    idp["ほかのログイン手段<br/>（Google、SAML など）"]
-    mail["マネージャーのメール"]
+    sso["SSO<br/>（SAML、Google など）"]
+    mail["使う人のメール"]
   end
 
   user --> cf
   cf -- "/*" --> s3
   cf -- "/api/*（OAC）" --> auth
   auth --> visible --> metrics
-  auth --> invite
-  invite --> ddb
+  auth --> connect
+  op --> script
+  script --> ddb
+  auth --> ddb
+  connect --> ddb
+  visible --> ddb
   auth --> ses
-  invite --> ses
   ses --> mail
+  connect --> gh
   metrics --> gh
   visible --> gh
-  metrics -.-> gl
-  collector -.-> gh
-  auth --> ddb
-  visible --> ddb
-  collector -.-> ddb
   gh --> sm
-  auth --> ghoauth
   gh --> ghapi
+  metrics -.-> gl
   gl -.-> gitlab
-  auth -.-> idp
+  collector -.-> gh
+  collector -.-> ddb
+  auth -.-> sso
 
   classDef future stroke-dasharray: 5 5
-  class gl,collector,idp,gitlab future
+  class gl,collector,sso,gitlab future
 ```
 
 - CloudFront は `/api/*` を API に、それ以外を S3 に送ります。API は CloudFront の署名付きリクエスト（OAC）しか受け付けません。ここまでは今の構成と同じです。
-- ユーザー、組織、リポジトリには miruca が ID を発行して、DynamoDB に置きます。GitHub のアカウントはログイン手段の1つ、GitHub App のインストールは組織の接続の1つとして扱います。
+- GitHub とのつなぎ方は Findy Team+ に合わせています。miruca にログインした状態で GitHub App をインストールし、インストールした組織のデータを見ます。
+- ログインはメールで届くリンクだけです。使えるメールアドレスは、運営者がスクリプトで許可します。
+- 0.1 では、GitHub をつないだ本人だけがその組織のデータを見ます。miruca の組織と招待は 0.1 の次で足します。
+- PR のデータは GitHub App のインストールトークンで取ります。だから GitHub のアカウントを持たない人にも同じ数字を出せます。
 - GitHub の応答は「GitHub の入り口」で miruca の型に変換します。判定と計算のコードは GitHub の型を知りません。
-- マネージャーは GitHub のアカウントを持たないので、メールで届くリンクでログインします。招待メールとログイン用のリンクは SES で送ります。
-- 見てよいかの判定は `visibleRepositories` の1か所です。管理者と「全体を見る人」は組織のすべてのリポジトリを、開発者は GitHub 上でアクセスできるリポジトリを見られます。
-- 将来は GitLab の入り口、Google や SAML などのログイン手段、定期収集を足します。0.1 では、GitHub と GitLab をまとめる共通のインターフェースは作りません。
+- 見てよいかの判定は `visibleRepositories` の1か所です。0.1 では、自分の接続のリポジトリだけを見られます。
+- 将来は miruca の組織と招待、SSO、GitLab の入り口、定期収集を足します。0.1 では、GitHub と GitLab をまとめる共通のインターフェースは作りません。
+
+## GitHub をつなぐまで
+
+```mermaid
+sequenceDiagram
+  participant B as ブラウザ
+  participant A as API
+  participant G as GitHub
+  participant D as DynamoDB
+
+  B->>A: GET /api/connections/github/new
+  A-->>B: state を cookie に入れ、App のインストール画面へリダイレクト
+  B->>G: 組織とリポジトリを選んでインストール
+  G-->>B: コールバックへリダイレクト（code、state、installation_id）
+  B->>A: GET /api/connections/github/callback
+  A->>A: state を cookie の値と照合する
+  A->>G: code をユーザーのトークンに交換し、GET /user/installations
+  A->>D: 返ってきたインストールそれぞれに、その人の接続を作る
+  A->>A: ユーザーのトークンを捨てる
+  A-->>B: リポジトリの一覧へ
+```
 
 ## リードタイムを表示するまで
 
@@ -78,20 +103,13 @@ sequenceDiagram
   participant G as GitHub API
 
   B->>A: GET /api/repositories/{repositoryId}/lead-time（cookie にセッション ID）
-  A->>D: セッションからユーザー、ログイン手段、所属を引く
-  alt 管理者か、全体を見る人
-    A->>A: 組織のすべてのリポジトリを見てよい
-  else GitHub でログインした開発者
-    A->>G: ユーザーのトークンで、アクセスできるリポジトリを取る
-  end
+  A->>D: セッションからユーザーと接続を引く
   A->>A: visibleRepositories で、見てよいかを判定する
   alt 見てはいけない
     A-->>B: 404
   else 見てよい
-    A->>G: インストールトークンで、直近30日にマージされた PR を取る
+    A->>G: インストールトークンで、直近30日にマージされた PR を取る（GraphQL の検索）
     A->>A: リードタイムと中央値を計算する
     A-->>B: LeadTimeReport
   end
 ```
-
-ユーザーのトークンは、開発者が「見てよいか」の判定にだけ使います。PR のデータは、誰が見るときも GitHub App のインストールトークンで取ります。だから GitHub のアカウントを持たないマネージャーにも同じ数字を出せます。
