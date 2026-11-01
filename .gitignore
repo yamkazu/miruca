@@ -3,3 +3,7 @@ dist/
 cdk.out/
 *.tsbuildinfo
 .env
+
+# Installed by npm run setup:cursor-plugins (npx skills)
+.agents/skills/
+skills-lock.json

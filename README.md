@@ -24,6 +24,17 @@ API は CloudFront の署名付きリクエスト（OAC）しか受け付けな�
 
 Issue に `ready-for-agent` ラベルを付けると Claude のプロジェクトが実装して PR を作り、品質ゲートを通ったものは自動でマージされます。詳しくは [docs/ai-workflow.md](docs/ai-workflow.md)。
 
+### Cursor プラグイン
+
+```sh
+npm run setup:cursor-plugins
+# 中身は次の2行だけ:
+#   npx skills add DietrichGebert/ponytail -a cursor
+#   npx skills add mattpocock/skills -a cursor
+```
+
+pstack はプロジェクトスコープで [`.cursor/settings.json`](.cursor/settings.json) に有効化済み（開いたら Reload Window）。Claude Code 側は `npm run setup:claude-plugins`。
+
 ## ローカルで動かす
 
 Node.js 22 以上が必要です。
