@@ -2,7 +2,7 @@
 
 ## 目的
 
-miruca は、チームの開発の流れを GitHub のデータから数字で見せるサービスです。MVP では、使う人が GitHub でログインし、自分が所属する組織のリポジトリを選んで、PR リードタイムを見られるところまでを作ります。
+miruca は、チームの開発の流れをコードホスティングサービスのデータから数字で見せるサービスです。MVP では、使う人が GitHub でログインし、自分が所属する組織のリポジトリを選んで、PR リードタイムを見られるところまでを作ります。
 
 MVP で確かめたいのは次の2つです。
 
@@ -11,10 +11,11 @@ MVP で確かめたいのは次の2つです。
 
 ## 使う人
 
-| 人 | やること |
-| --- | --- |
-| 組織の管理者 | 自分の組織に miruca の GitHub App をインストールし、対象のリポジトリを選ぶ |
-| チームのメンバー | GitHub でログインし、自分が見られるリポジトリの PR リードタイムを見る |
+| 人 | やること | MVP |
+| --- | --- | --- |
+| 組織の管理者 | 自分の組織に miruca の GitHub App をインストールし、対象のリポジトリを選ぶ | 対象 |
+| チームのメンバー | GitHub でログインし、自分が見られるリポジトリの PR リードタイムを見る | 対象 |
+| 経営者 | 組織のすべてのリポジトリの数字を見る。GitHub のアカウントは持っていない | 対象外。前提だけ入れる |
 
 ## 範囲
 
@@ -26,14 +27,16 @@ MVP で確かめたいのは次の2つです。
 
 ### MVP に入れないもの
 
+- GitHub 以外でのログイン（メールアドレス、Google、SAML など）。
+- 経営者などが組織のすべてのリポジトリを見られる役割。
+- GitLab など GitHub 以外のサービスへの対応。
 - 定期的なデータ収集と保存。表示のたびに GitHub API を呼ぶ。
 - 複数のリポジトリをまとめた集計、チーム単位の集計。
 - PR リードタイム以外の指標（レビュー時間、スループット、DORA）。
 - グラフ、期間の切り替え、CSV の出力。
-- miruca 独自のユーザー管理、権限管理、課金。
-- 経営者などが組織のすべてのリポジトリを見られる役割。前提だけ MVP で入れる（「将来の拡張に向けた前提」を参照）。
+- 課金。
 
-これらは MVP を使った人の反応を見てから、別の PRD か Issue で扱います。
+最初の3つは、MVP の作りで後から足せるようにする（「将来の拡張に向けた前提」を参照）。残りは MVP を使った人の反応を見てから、別の PRD か Issue で扱う。
 
 ## 使う人の流れ
 
@@ -43,12 +46,24 @@ MVP で確かめたいのは次の2つです。
 4. 自分が見られる組織とリポジトリが一覧で出る。
 5. リポジトリを選ぶと、直近30日にマージされた PR の一覧とリードタイムの中央値が出る。
 
+## 用語
+
+| 用語 | 意味 |
+| --- | --- |
+| ユーザー | miruca に登録された人。miruca が ID を発行する。GitHub のアカウントとは別のもの |
+| ログイン手段 | ユーザーがログインに使う外部のアカウント。MVP では GitHub だけ |
+| 組織 | miruca 上の会社やチームの単位。miruca が ID を発行する |
+| 接続 | 組織とコードホスティングサービスのつながり。MVP では GitHub App のインストール1つ |
+| リポジトリ | 接続を通して見えるリポジトリ。miruca が ID を発行する |
+| PR | GitHub の Pull Request。将来は GitLab の Merge Request も PR として扱う |
+
 ## 機能要件
 
 ### F1. ログインとログアウト
 
 - GitHub App のユーザー認可（OAuth の流れ）でログインする。
 - 認可の要求には `state` を付け、戻ってきたときに照合する。一致しなければログインを失敗にする。
+- 初めてログインした GitHub アカウントには、miruca のユーザーを作り、ログイン手段として GitHub アカウントを紐づける。2回目からは紐づいたユーザーとしてログインする。
 - ログインに成功すると、ブラウザには HttpOnly、Secure、SameSite=Lax の cookie でセッション ID だけを渡す。
 - GitHub のトークン（アクセストークンとリフレッシュトークン）はサーバー側に保存し、ブラウザには渡さない。
 - アクセストークンの期限が切れていたら、リフレッシュトークンで取り直す。取り直せなければログアウトした状態にし、ログイン画面に戻す。
@@ -56,9 +71,10 @@ MVP で確かめたいのは次の2つです。
 
 ### F2. 組織とリポジトリの一覧
 
-- ログインした人のトークンで、GitHub API の `GET /user/installations` と `GET /user/installations/{installation_id}/repositories` を呼ぶ。
-- 一覧に出すのは、miruca がインストールされていて、かつその人がアクセスできるリポジトリだけ。MVP では miruca 側で所属を管理しない。
-- その人が見られるリポジトリの判定は、API の1か所（`visibleRepositories(session)`）にまとめる。F3 もこの判定を使う。
+- ログインした人の GitHub のトークンで、GitHub API の `GET /user/installations` と `GET /user/installations/{installation_id}/repositories` を呼ぶ。
+- 初めて見えたインストールには、miruca の組織と接続を作る。初めて見えたリポジトリにも miruca の ID を発行する。
+- 一覧に出すのは、miruca がインストールされていて、かつその人が GitHub 上でアクセスできるリポジトリだけ。
+- その人が見られるリポジトリの判定は、API の1か所（`visibleRepositories(user)`）にまとめる。F3 もこの判定を使う。
 - 一覧が空のときは、「所属する組織に miruca がインストールされていません」と表示し、管理者にインストールを頼むための案内を出す。
 
 ### F3. PR リードタイム
@@ -69,16 +85,24 @@ MVP で確かめたいのは次の2つです。
 - 画面には次のものを出す。
   - 対象の PR の件数
   - リードタイムの中央値（時間単位、小数第1位まで）
-  - PR の一覧（番号、タイトル、作成者、リードタイム、GitHub へのリンク）。リードタイムの長い順に並べる
+  - PR の一覧（番号、タイトル、作成者、リードタイム、元のサービスへのリンク）。リードタイムの長い順に並べる
 - 対象の PR が0件のときは、「直近30日にマージされた PR はありません」と表示する。
 - 集計する PR は最大1000件とする。1000件を超えたら、集計が最新の1000件分であることを画面に表示する。
 
 ## データの形
 
 ```ts
-type Session = {
-  sessionId: string;
-  githubUserId: number;
+type Provider = 'github';
+
+type User = {
+  userId: string;
+  displayName: string;
+};
+
+type Identity = {
+  userId: string;
+  provider: Provider;
+  externalId: string;
   login: string;
   accessToken: string;
   accessTokenExpiresAt: string;
@@ -86,16 +110,33 @@ type Session = {
   refreshTokenExpiresAt: string;
 };
 
-type InstallationList = {
-  installations: {
-    id: number;
-    account: { login: string; type: 'Organization' | 'User' };
-    repositories: { id: number; fullName: string }[];
-  }[];
+type Session = {
+  sessionId: string;
+  userId: string;
+  expiresAt: string;
+};
+
+type Organization = {
+  organizationId: string;
+  name: string;
+};
+
+type Connection = {
+  connectionId: string;
+  organizationId: string;
+  provider: Provider;
+  externalId: string;
+};
+
+type Repository = {
+  repositoryId: string;
+  connectionId: string;
+  externalId: string;
+  fullName: string;
 };
 
 type LeadTimeReport = {
-  repository: string;
+  repository: { repositoryId: string; fullName: string };
   since: string;
   until: string;
   count: number;
@@ -113,37 +154,49 @@ type LeadTimeReport = {
 };
 ```
 
-GitHub API の応答は API の入り口でこれらの型に変換し、画面には GitHub の生の応答を渡さない。
+- `provider` と `externalId` の組で、外部サービス側の ID を持つ。miruca の中で別のデータを指すときは、miruca の ID（`userId`、`organizationId`、`repositoryId`）を使う。
+- GitHub API の応答は API の入り口でこれらの型に変換し、画面には GitHub の生の応答を渡さない。
 
 ## API
 
 | メソッドとパス | 役割 |
 | --- | --- |
-| `GET /api/auth/login` | GitHub の認可画面へリダイレクトする |
-| `GET /api/auth/callback` | 認可コードをトークンに交換し、セッションを作る |
+| `GET /api/auth/github/login` | GitHub の認可画面へリダイレクトする |
+| `GET /api/auth/github/callback` | 認可コードをトークンに交換し、ユーザーとセッションを作る |
 | `POST /api/auth/logout` | セッションを消す |
-| `GET /api/me` | ログインしている人の `login` を返す。未ログインなら 401 |
-| `GET /api/installations` | `InstallationList` を返す |
-| `GET /api/repos/:owner/:repo/lead-time` | `LeadTimeReport` を返す。その人が見られないリポジトリなら 404 |
+| `GET /api/me` | ログインしているユーザーの `userId` と `displayName` を返す。未ログインなら 401 |
+| `GET /api/organizations` | 見られる組織と、その中の見られるリポジトリを返す |
+| `GET /api/repositories/:repositoryId/lead-time` | `LeadTimeReport` を返す。その人が見られないリポジトリなら 404 |
+
+パスに GitHub の `owner/repo` を使わず、miruca の `repositoryId` を使う。GitLab のリポジトリも同じパスで扱えるようにするため。
 
 ## インフラの変更
 
-MVP では次のものを足します。どれも IAM の権限を広げるか、リソースを足す変更なので、該当する Issue に明記します。
+MVP では次のものを足す。どれも IAM の権限を広げるか、リソースを足す変更なので、該当する Issue に明記する。
 
-- セッションを保存する DynamoDB テーブル（TTL でセッションの期限切れを消す）
+- ユーザー、ログイン手段、セッション、組織、接続、リポジトリを保存する DynamoDB テーブル（セッションは TTL で期限切れを消す）
 - GitHub App の client ID、client secret、秘密鍵（インストールトークンの発行に使う）を置く Secrets Manager のシークレット
 - API の Lambda がこのテーブルを読み書きし、シークレットを読むための IAM 権限
 
-GitHub App の作成と、コールバック URL（CloudFront の URL + `/api/auth/callback`）の登録は、リポジトリの管理者が GitHub の画面で1回だけ行います。
+GitHub App の作成と、コールバック URL（CloudFront の URL + `/api/auth/github/callback`）の登録は、リポジトリの管理者が GitHub の画面で1回だけ行う。
 
 ## 将来の拡張に向けた前提
 
-将来は、経営者などが組織のすべてのリポジトリを見られるようにする。その人は GitHub 上で各リポジトリの権限を持っていないことがある。MVP の時点で次の2つを守り、この役割を足すときに作り直しが要らないようにする。
+将来、次の3つを足す。
 
-- **見てよいかの判定を1か所にまとめる。** 役割を足すときは `visibleRepositories` だけを変える。MVP では「GitHub 上でアクセスできるリポジトリ」を返し、将来は「全体を見る役割の人にはインストール先のすべてのリポジトリ」を返す。
-- **データは GitHub App の権限で取る。** ユーザーのトークンで取ると、GitHub 上の権限がない人の分は取れない。インストールトークンで取っておけば、判定を変えるだけで済む。将来の定期収集も、ログインした人がいない状態で同じトークンを使える。
+- 経営者などが、組織のすべてのリポジトリを見られる役割。
+- GitHub のアカウントを持たない人のログイン（経営者は GitHub のアカウントを持っていない）。
+- GitLab など、GitHub 以外のサービスへの対応。
 
-役割をどこで管理するか（miruca の画面で付けるか、GitHub の組織のロールやチームに合わせるか）と、GitHub アカウントを持たない人のログインは、この役割を作るときに決める。
+どれも「miruca のユーザーと組織は GitHub のアカウントと組織そのもの」という前提では作れない。MVP の時点で次のことを守り、足すときに作り直しが要らないようにする。
+
+- **ユーザーは miruca が持つ。** GitHub のアカウントは、ユーザーに紐づくログイン手段の1つにする。経営者向けのログイン手段は、`Identity` を1種類足せば済む。
+- **組織は miruca が持つ。** GitHub App のインストールは、組織の接続の1つにする。GitLab は `Connection` の `provider` を足して扱う。
+- **見てよいかの判定を1か所にまとめる。** 役割を足すときは `visibleRepositories` だけを変える。MVP では「GitHub 上でアクセスできるリポジトリ」を返す。将来は「全体を見る役割のユーザーには、組織のすべてのリポジトリ」を返す。
+- **データは接続の権限で取る。** ユーザーのトークンで取ると、GitHub のアカウントがない人の分は取れない。インストールトークンで取っておけば、判定を変えるだけで済む。将来の定期収集も、同じトークンでログインした人なしに動く。
+- **外部サービスの形は入り口で止める。** GitHub の応答は入り口で miruca の型に変換し、API のパスと画面には miruca の ID を使う。
+
+MVP では、GitHub と GitLab を切り替えるための共通のインターフェースは作らない。実装が GitHub の1つしかないうちは、型の変換だけを入り口に置く。インターフェースは、GitLab に対応するときに2つの実装を見て決める。
 
 ## 成功の基準
 
@@ -153,18 +206,23 @@ GitHub App の作成と、コールバック URL（CloudFront の URL + `/api/au
 
 ## Issue の分け方
 
-1. GitHub App でログイン、ログアウトし、自分が見られる組織とリポジトリの一覧を出す（F1、F2、インフラの変更すべて）。
-2. 選んだリポジトリの PR リードタイムを出す（F3）。
+1. GitHub でログイン、ログアウトする。ユーザー、ログイン手段、セッションを保存する（F1）。
+2. 自分が見られる組織とリポジトリの一覧を出す。組織、接続、リポジトリを保存する（F2）。
+3. 選んだリポジトリの PR リードタイムを出す（F3）。
+
+インフラの変更は、そのテーブルやシークレットを最初に使う Issue に入れる。
 
 ## 未決事項
 
-PRD を書いた時点で、次のことは仮に決めています。変えるときはこの PRD を直してから Issue を書きます。
+PRD を書いた時点で、次のことは仮に決めている。変えるときはこの PRD を直してから Issue を書く。
 
 | 項目 | 仮の決定 | ほかの案 |
 | --- | --- | --- |
-| 「プロジェクト」の単位 | GitHub の組織と、その中のリポジトリ | miruca 上で複数のリポジトリを束ねた単位 |
 | 導入の形 | 組織の管理者が GitHub App をインストールする | 個人がそれぞれ OAuth App で認可する |
+| MVP の組織 | GitHub のインストール1つにつき、miruca の組織1つ | 1つの組織に複数のインストールをまとめる |
 | 最初の指標 | PR リードタイム | レビュー時間、スループット |
 | リードタイムの起点 | PR を作った時刻 | PR の最初のコミットの時刻 |
 | ボットの PR | 含める | Dependabot などを除く |
-| 全体を見る役割の管理 | 未定（MVP では作らない） | miruca の画面で付ける、GitHub の組織のロールやチームに合わせる |
+| 全体を見る役割の管理 | 未定（MVP では作らない） | miruca の画面で付ける、招待で付ける |
+| GitHub 以外のログイン手段 | 未定（MVP では作らない） | メールアドレス、Google、SAML、Amazon Cognito などの認証サービス |
+| GitLab に対応する時期 | 未定（MVP では作らない） | MVP の次、指標を増やした後 |
