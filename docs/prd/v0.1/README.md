@@ -39,13 +39,7 @@ GitHub とのつなぎ方は Findy Team+ に合わせます。miruca にログ�
 
 ## 用語
 
-| 用語 | 意味 |
-| --- | --- |
-| ユーザー | miruca に登録された人。メールアドレスで識別する。miruca が ID を発行する |
-| 接続 | ユーザーと GitHub App のインストール1つのつながり。1人のユーザーが複数の接続を持てる。同じインストールに、複数のユーザーがそれぞれ接続を持てる |
-| GitHub の組織 | GitHub App をインストールした先の、GitHub の組織（または個人のアカウント） |
-| リポジトリ | 接続を通して見えるリポジトリ。miruca が ID を発行する |
-| PR | GitHub の Pull Request。将来は GitLab の Merge Request も PR として扱う |
+用語はリポジトリ直下の [GLOSSARY.md](../../../GLOSSARY.md) にある。
 
 ## 見られる範囲
 
