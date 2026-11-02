@@ -86,13 +86,18 @@ GitHub とのつなぎ方は Findy Team+ に合わせます。miruca にログ�
 
 ローカル専用のログインの API（`POST /api/dev/login`）を出すかどうかは、ビルドのときではなく、API の起動時に読む設定で決める。本番の設定では、この API を登録しない。設定の誤りで本番に入り口が開かないよう、次の2つでも防ぐ。
 
-- 設定を読む関数は、Lambda の実行環境の上で `MIRUCA_ENV=local` が設定されていたら、起動をエラーで止める。Lambda の実行環境かどうかは、Lambda が設定する環境変数で見分ける。
+- 設定を読む関数は、Lambda の実行環境の上で `MIRUCA_ENV=local` が設定されていたら、起動をエラーで止める。次の環境変数のどれか1つでも設定されていたら、Lambda の実行環境とみなす。
+  - `AWS_LAMBDA_HTTP_ENDPOINT`: Lambda Web Functions が API に待ち受けのアドレスを渡すのに使う。今の API もこれを読んで待ち受けている
+  - `AWS_LAMBDA_FUNCTION_NAME`: Lambda の実行環境が設定する関数の名前
+  - `AWS_EXECUTION_ENV`: Lambda の実行環境が設定するランタイムの名前
+
+  1つに頼らず3つを見るのは、実行環境やアダプターが変わって、どれかが設定されなくなっても止められるようにするため。
 - CDK のスタックは、Lambda に `MIRUCA_ENV` を設定しない。
 
 テストで次の3つを確かめる。
 
 - 本番の設定で作った API では、`POST /api/dev/login` が 404 になる。
-- Lambda の実行環境の上で `MIRUCA_ENV=local` なら、設定を読む関数がエラーになる。
+- `MIRUCA_ENV=local` のとき、上の3つの環境変数のそれぞれについて、それだけが設定されていればエラーになる。3つとも設定されていなければ、ローカルの設定になる。
 - CDK のスタックの Lambda に、`MIRUCA_ENV` が設定されていない（infra のテスト）。
 
 ## GitHub との連携
