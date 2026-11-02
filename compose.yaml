@@ -1,0 +1,8 @@
+# Local AWS (DynamoDB, SES, Secrets Manager) for miruca. Start with `npm run dev:services`.
+services:
+  ministack:
+    # Deliberately the moving `latest` tag: if tests suddenly fail, suspect a MiniStack update too.
+    image: ministackorg/ministack:latest
+    ports:
+      - "4566:4566"
+    # No PERSIST_STATE: data lives in memory only, so every start begins clean.

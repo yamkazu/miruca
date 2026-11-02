@@ -10,7 +10,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev:api": "tsx watch apps/api/src/server.ts",
+    "dev:services": "docker compose up",
+    "dev:api": "tsx watch apps/api/src/local/server.ts",
     "dev:web": "npm run dev -w @miruca/web",
     "build": "npm run build -w @miruca/web && node scripts/bundle.mjs",
     "test": "vitest run",

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app';
+import { productionConfig } from '../src/config';
 
 describe('api', () => {
-  const app = createApp();
+  const app = createApp(productionConfig);
 
   afterEach(() => vi.unstubAllEnvs());
 
