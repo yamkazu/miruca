@@ -37,15 +37,25 @@ pstack はプロジェクトスコープで [`.cursor/settings.json`](.cursor/se
 
 ## ローカルで動かす
 
-Node.js 22 以上が必要です。
+Node.js 22 以上と Docker が必要です。AWS のアカウントと GitHub は要りません。
+
+ターミナルを3つ開き、次の順で起動します。
 
 ```sh
 npm install
-npm run dev:api   # http://127.0.0.1:8787/api/hello
-npm run dev:web   # http://localhost:5173 （/api は 8787 にプロキシ）
+npm run dev:services  # MiniStack（ローカルの DynamoDB、SES、Secrets Manager）を http://localhost:4566 で起動
+npm run dev:api       # MiniStack にテーブルとサンプルのユーザーを入れてから、ローカルの API を http://127.0.0.1:8787 で起動
+npm run dev:web       # http://localhost:5173 （/api は 8787 にプロキシ）
 ```
 
-テストと型チェック:
+http://localhost:5173 を開き、「サンプルのユーザーとして入る」を押すとログインできます。メールアドレスを省くと `sample@miruca.local`、入れるとそのユーザーになります。
+
+- `npm run dev:api` はローカルの入り口（`apps/api/src/local/server.ts`）を起動します。AWS の接続先を MiniStack にし、ローカル専用のログインを足します。本番の入り口（`apps/api/src/server.ts`）と Lambda に載るコードには、ローカル専用のログインは入りません。環境変数では切り替えません。
+- MiniStack のデータはメモリ上だけにあります。止めて起動し直すと空になるので、`npm run dev:api` も起動し直してください（準備は何度動かしても同じ結果になります）。
+- MiniStack は `latest` のイメージを使います。テストが急に落ちたときは、MiniStack の更新も疑ってください。
+- Claude のクラウドのセッションで Docker のデーモンが止まっていたら、`dockerd` を起動してください。
+
+テストと型チェック（`npm test` は MiniStack につなぐので、先に `npm run dev:services` を起動してください）:
 
 ```sh
 npm test
